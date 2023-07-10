@@ -21,6 +21,6 @@ setup(
     packages=find_packages(),
     license=about["__license__"],
     install_requires=["numpy", "pandas", "scikit-learn"],
-    python_requires=">=3.5",
+    python_requires=">=3.8",
     include_package_data=True,
 )

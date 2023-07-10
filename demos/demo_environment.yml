@@ -2,7 +2,7 @@ name: cytominer-eval-demo
 channels:
 - conda-forge
 dependencies:
-- conda-forge::python=3.7
+- conda-forge::python=3.8
 - conda-forge::pandas=1.2.0
 - conda-forge::numpy
 - conda-forge::scikit-learn
