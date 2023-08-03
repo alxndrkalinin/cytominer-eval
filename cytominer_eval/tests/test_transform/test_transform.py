@@ -1,7 +1,6 @@
-import os
 import random
 import pytest
-import pathlib
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
@@ -11,11 +10,7 @@ from cytominer_eval.transform import metric_melt
 random.seed(123)
 
 example_file = "SQ00015054_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/compound/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/compound" / example_file
 
 df = pd.read_csv(example_file)
 
@@ -24,12 +19,8 @@ features = df.drop(meta_features, axis="columns").columns.tolist()
 
 feature_df = df.loc[:, features]
 meta_df = df.loc[:, meta_features]
-sample_a = feature_df.iloc[
-    0,
-].values
-sample_b = feature_df.iloc[
-    1,
-].values
+sample_a = feature_df.iloc[0,].values
+sample_b = feature_df.iloc[1,].values
 example_sample_corr = np.corrcoef(sample_a, sample_b)[0, 1]
 
 pairwise_metric_df = get_pairwise_metric(feature_df, similarity_metric="pearson")

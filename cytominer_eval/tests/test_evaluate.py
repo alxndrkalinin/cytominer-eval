@@ -1,7 +1,6 @@
 """Test evaluate method of cytominer-eval."""
-import os
 import pytest
-import pathlib
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from math import isclose
@@ -12,11 +11,7 @@ from cytominer_eval.utils.availability_utils import get_available_similarity_met
 
 
 example_gene_file = "SQ00014610_normalized_feature_select.csv.gz"
-example_gene_file = pathlib.Path(
-    "{file}/../example_data/gene/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_gene_file
-    )
-)
+example_gene_file = Path(__file__).parent / "../example_data/gene" / example_gene_file
 gene_profiles = pd.read_csv(example_gene_file)
 
 gene_meta_features = [
@@ -28,10 +23,8 @@ gene_features = gene_profiles.drop(gene_meta_features, axis="columns").columns.t
 gene_groups = ["Metadata_gene_name", "Metadata_pert_name"]
 
 example_compound_file = "SQ00015054_normalized_feature_select.csv.gz"
-example_compound_file = pathlib.Path(
-    "{file}/../example_data/compound/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_compound_file
-    )
+example_compound_file = (
+    Path(__file__).parent / "../example_data/compound" / example_compound_file
 )
 compound_profiles = pd.read_csv(example_compound_file)
 
@@ -140,7 +133,6 @@ def test_evaluate_precision_recall():
     compound_groupby_columns = ["Metadata_broad_sample"]
 
     for k in ks:
-
         # first test the function with k = float, later we test with k = list of floats
         result = evaluate(
             profiles=gene_profiles,
@@ -215,9 +207,7 @@ def test_evaluate_grit():
     top_result = (
         grit_results_df.sort_values(by="grit", ascending=False)
         .reset_index(drop=True)
-        .iloc[
-            0,
-        ]
+        .iloc[0,]
     )
     assert np.round(top_result.grit, 4) == 2.3352
     assert top_result.group == "PTK2"
@@ -243,9 +233,7 @@ def test_evaluate_grit():
     top_result = (
         grit_results_df.sort_values(by="grit", ascending=False)
         .reset_index(drop=True)
-        .iloc[
-            0,
-        ]
+        .iloc[0,]
     )
 
     assert np.round(top_result.grit, 4) == 0.9990

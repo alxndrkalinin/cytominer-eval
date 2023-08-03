@@ -37,13 +37,12 @@ def assign_replicates(
         operations.
     """
     pair_ids = set_pair_ids()
-    replicate_col_names = {x: "{x}_replicate".format(x=x) for x in replicate_groups}
+    replicate_col_names = {x: f"{x}_replicate" for x in replicate_groups}
 
     compare_dfs = []
     for replicate_col in replicate_groups:
         replicate_cols_with_suffix = [
-            "{col}{suf}".format(col=replicate_col, suf=pair_ids[x]["suffix"])
-            for x in pair_ids
+            f"{replicate_col}{pair_ids[x]['suffix']}" for x in pair_ids
         ]
 
         assert all(

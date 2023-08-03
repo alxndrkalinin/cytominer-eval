@@ -1,6 +1,5 @@
-import os
 import pytest
-import pathlib
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from math import isclose
@@ -15,11 +14,7 @@ from cytominer_eval.utils.mpvalue_utils import (
 
 # Load CRISPR dataset
 example_file = "SQ00014610_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/gene/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/gene" / example_file
 
 df = pd.read_csv(example_file)
 

@@ -50,8 +50,7 @@ def precision_recall(
     # Extract out specific columns
     pair_ids = set_pair_ids()
     groupby_cols_suffix = [
-        "{x}{suf}".format(x=x, suf=pair_ids[list(pair_ids)[0]]["suffix"])
-        for x in groupby_columns
+        f"{x}{pair_ids[list(pair_ids)[0]]['suffix']}" for x in groupby_columns
     ]
     # iterate over all k
     precision_recall_df = pd.DataFrame()

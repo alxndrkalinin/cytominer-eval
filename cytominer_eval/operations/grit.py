@@ -56,9 +56,7 @@ def grit(
 
     # Extract out specific columns
     pair_ids = set_pair_ids()
-    profile_col_name = "{x}{suf}".format(
-        x=profile_col, suf=pair_ids[list(pair_ids)[0]]["suffix"]
-    )
+    profile_col_name = f"{profile_col}{pair_ids[list(pair_ids)[0]]['suffix']}"
 
     # Define the columns to use in the calculation
     column_id_info = set_grit_column_info(

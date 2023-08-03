@@ -69,8 +69,7 @@ def hitk(
     # Extract the name of the columns in the sim_df
     pair_ids = set_pair_ids()
     groupby_cols_suffix = [
-        "{x}{suf}".format(x=x, suf=pair_ids[list(pair_ids)[0]]["suffix"])
-        for x in groupby_columns
+        f"{x}{pair_ids[list(pair_ids)[0]]['suffix']}" for x in groupby_columns
     ]
 
     # group the sim_df by the groupby_columns

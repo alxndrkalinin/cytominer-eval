@@ -1,7 +1,6 @@
-import os
 import random
 import pytest
-import pathlib
+from pathlib import Path
 import tempfile
 import numpy as np
 import pandas as pd
@@ -13,11 +12,7 @@ random.seed(123)
 tmpdir = tempfile.gettempdir()
 
 example_file = "SQ00015054_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/compound/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/compound" / example_file
 
 df = pd.read_csv(example_file)
 
@@ -62,9 +57,9 @@ def test_replicate_reproducibility_uniquerows():
             replicate_groups=replicate_groups,
             quantile_over_null=0.95,
         )
-    assert "no replicate groups identified in {rep} columns!".format(
-        rep=replicate_groups
-    ) in str(err.value)
+    assert f"no replicate groups identified in {replicate_groups} columns!" in str(
+        err.value
+    )
 
 
 def test_replicate_reproducibility_return_cor():

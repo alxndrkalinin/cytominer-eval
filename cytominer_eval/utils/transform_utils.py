@@ -42,9 +42,7 @@ def convert_pandas_dtypes(df: pd.DataFrame, col_fix: type = float) -> pd.DataFra
         df = df.astype(col_fix)
     except ValueError:
         raise ValueError(
-            "Columns cannot be converted to {col}; check input features".format(
-                col=col_fix
-            )
+            f"Columns cannot be converted to {col_fix}; check input features"
         )
 
     return df
@@ -106,9 +104,9 @@ def assert_melt(
     df = df.loc[:, [pair_ids[x]["index"] for x in pair_ids]]
     index_sums = df.sum().tolist()
 
-    assert_error = "Stop! The eval_metric provided in 'metric_melt()' is incorrect!"
-    assert_error = "{err} This is a fatal error providing incorrect results".format(
-        err=assert_error
+    assert_error = (
+        "Stop! The eval_metric provided in 'metric_melt()' is incorrect!"
+        "This is a fatal error providing incorrect results"
     )
     if eval_metric == "replicate_reproducibility":
         assert index_sums[0] != index_sums[1], assert_error
@@ -133,12 +131,12 @@ def set_pair_ids():
 
     return_dict = OrderedDict()
     return_dict[pair_a] = {
-        "index": "{pair_a}_index".format(pair_a=pair_a),
-        "suffix": "_{pair_a}".format(pair_a=pair_a),
+        "index": f"{pair_a}_index",
+        "suffix": f"_{pair_a}",
     }
     return_dict[pair_b] = {
-        "index": "{pair_b}_index".format(pair_b=pair_b),
-        "suffix": "_{pair_b}".format(pair_b=pair_b),
+        "index": f"{pair_b}_index",
+        "suffix": f"_{pair_b}",
     }
 
     return return_dict
@@ -177,9 +175,7 @@ def check_replicate_groups(
 
         assert all(
             [x in replicate_groups for x in replicate_key_ids]
-        ), "replicate_groups for grit not formed properly. Must contain {id}".format(
-            id=replicate_key_ids
-        )
+        ), f"replicate_groups for grit not formed properly. Must contain {replicate_key_ids}"
     elif eval_metric == "mp_value":
         assert isinstance(
             replicate_groups, str
@@ -187,6 +183,4 @@ def check_replicate_groups(
     else:
         assert isinstance(
             replicate_groups, list
-        ), "Replicate groups must be a list for the {op} operation".format(
-            op=eval_metric
-        )
+        ), f"Replicate groups must be a list for the {eval_metric} operation"

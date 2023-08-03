@@ -128,14 +128,10 @@ def set_grit_column_info(profile_col: str, replicate_group_col: str) -> dict:
     # Identify column transform names
     pair_ids = set_pair_ids()
 
-    profile_id_with_suffix = [
-        "{col}{suf}".format(col=profile_col, suf=pair_ids[x]["suffix"])
-        for x in pair_ids
-    ]
+    profile_id_with_suffix = [f"{profile_col}{pair_ids[x]['suffix']}" for x in pair_ids]
 
     group_id_with_suffix = [
-        "{col}{suf}".format(col=replicate_group_col, suf=pair_ids[x]["suffix"])
-        for x in pair_ids
+        f"{replicate_group_col}{pair_ids[x]['suffix']}" for x in pair_ids
     ]
 
     col_info = ["id", "comparison"]

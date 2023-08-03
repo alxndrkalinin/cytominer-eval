@@ -1,7 +1,6 @@
-import os
 import random
 import pytest
-import pathlib
+from pathlib import Path
 import tempfile
 import numpy as np
 import pandas as pd
@@ -22,17 +21,11 @@ random.seed(123)
 tmpdir = tempfile.gettempdir()
 
 example_file = "SQ00015054_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/compound/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/compound" / example_file
 
 df = pd.read_csv(example_file)
 df = df.assign(
-    Metadata_profile_id=[
-        "Metadata_profile_{x}".format(x=x) for x in range(0, df.shape[0])
-    ]
+    Metadata_profile_id=[f"Metadata_profile_{x}" for x in range(0, df.shape[0])]
 )
 
 meta_features = [x for x in df.columns if x.startswith("Metadata_")]
@@ -60,9 +53,7 @@ def test_assign_replicates():
         similarity_melted_df=similarity_melted_df, replicate_groups=replicate_groups
     )
 
-    expected_cols = ["{x}_replicate".format(x=x) for x in replicate_groups] + [
-        "group_replicate"
-    ]
+    expected_cols = [f"{x}_replicate" for x in replicate_groups] + ["group_replicate"]
 
     # Other functions expect columns to exist
     assert all([x in result.columns.tolist() for x in expected_cols])
@@ -81,9 +72,7 @@ def test_assign_replicates():
         similarity_melted_df=similarity_melted_df, replicate_groups=replicate_groups
     )
 
-    expected_cols = ["{x}_replicate".format(x=x) for x in replicate_groups] + [
-        "group_replicate"
-    ]
+    expected_cols = [f"{x}_replicate" for x in replicate_groups] + ["group_replicate"]
 
     # Other functions expect columns to exist
     assert all([x in result.columns.tolist() for x in expected_cols])
@@ -117,8 +106,7 @@ def test_calculate_precision_recall():
 
     pair_ids = set_pair_ids()
     replicate_group_cols = [
-        "{x}{suf}".format(x=x, suf=pair_ids[list(pair_ids)[0]]["suffix"])
-        for x in replicate_groups
+        f"{x}{pair_ids[list(pair_ids)[0]]['suffix']}" for x in replicate_groups
     ]
 
     example_group = result.groupby(replicate_group_cols).get_group(
@@ -175,7 +163,6 @@ def test_compare_distributions():
         "zscore": {"mean": 5.639379456018854, "median": 5.648269672347573}
     }
     for summary_method in get_available_summary_methods():
-
         hardcoded = hardcoded_values_should_not_change["zscore"][summary_method]
 
         result = compare_distributions(

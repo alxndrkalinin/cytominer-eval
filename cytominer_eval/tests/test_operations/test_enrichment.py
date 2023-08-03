@@ -1,6 +1,5 @@
-import os
 import random
-import pathlib
+from pathlib import Path
 import tempfile
 import numpy as np
 import pandas as pd
@@ -16,11 +15,7 @@ tmpdir = tempfile.gettempdir()
 
 # Load LINCS dataset
 example_file = "SQ00015054_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/compound/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/compound" / example_file
 
 df = pd.read_csv(example_file)
 

@@ -57,9 +57,7 @@ def replicate_reproducibility(
     replicate_df = similarity_melted_df.query("group_replicate")
     denom = replicate_df.shape[0]
 
-    assert denom != 0, "no replicate groups identified in {rep} columns!".format(
-        rep=replicate_groups
-    )
+    assert denom != 0, f"no replicate groups identified in {replicate_groups} columns!"
 
     non_replicate_quantile = similarity_melted_df.query(
         "not group_replicate"
@@ -72,8 +70,7 @@ def replicate_reproducibility(
     if return_median_correlations:
         pair_ids = set_pair_ids()
         replicate_groups_for_groupby = {
-            "{col}{suf}".format(col=x, suf=pair_ids["pair_a"]["suffix"]): x
-            for x in replicate_groups
+            f"{x}{pair_ids['pair_a']['suffix']}": x for x in replicate_groups
         }
 
         median_cor_df = (

@@ -1,6 +1,5 @@
-import os
 import pytest
-import pathlib
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
@@ -19,11 +18,7 @@ from cytominer_eval.utils.grit_utils import (
 
 # Load CRISPR dataset
 example_file = "SQ00014610_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/gene/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/gene" / example_file
 
 df = pd.read_csv(example_file)
 
@@ -45,9 +40,7 @@ profile_col = "Metadata_pert_name"
 replicate_group_col = "Metadata_gene_name"
 
 pair_ids = set_pair_ids()
-replicate_col_name = "{x}{suf}".format(
-    x=profile_col, suf=pair_ids[list(pair_ids)[0]]["suffix"]
-)
+replicate_col_name = f"{profile_col}{pair_ids[list(pair_ids)[0]]['suffix']}"
 
 column_id_info = set_grit_column_info(
     profile_col=profile_col, replicate_group_col=replicate_group_col

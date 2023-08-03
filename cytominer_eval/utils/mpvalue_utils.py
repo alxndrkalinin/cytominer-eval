@@ -129,8 +129,8 @@ def calculate_mp_value(
 
     assert all(
         [x in p.keys() for x in params.keys()]
-    ), "Unknown parameters provided. Only {e} are supported.".format(e=p.keys())
-    for (k, v) in params.items():
+    ), f"Unknown parameters provided. Only {p.keys()} are supported."
+    for k, v in params.items():
         p[k] = v
 
     merge_df = pd.concat([pert_df, control_df]).reset_index(drop=True)

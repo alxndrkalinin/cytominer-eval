@@ -1,6 +1,5 @@
-import os
 import random
-import pathlib
+from pathlib import Path
 import pandas as pd
 
 
@@ -11,11 +10,7 @@ random.seed(42)
 
 # Load CRISPR dataset
 example_file = "SQ00014610_normalized_feature_select.csv.gz"
-example_file = pathlib.Path(
-    "{file}/../../example_data/gene/{eg}".format(
-        file=os.path.dirname(__file__), eg=example_file
-    )
-)
+example_file = Path(__file__).parent / "../../example_data/gene" / example_file
 
 df = pd.read_csv(example_file)
 

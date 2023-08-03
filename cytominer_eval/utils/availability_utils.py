@@ -42,9 +42,7 @@ def check_eval_metric(eval_metric: str) -> None:
 
     assert (
         eval_metric in avail_metrics
-    ), "{eval} not supported. Select one of {avail}".format(
-        eval=eval_metric, avail=avail_metrics
-    )
+    ), f"{eval_metric} not supported. Select one of {avail_metrics}"
 
 
 def check_similarity_metric(similarity_metric: str) -> None:
@@ -64,9 +62,7 @@ def check_similarity_metric(similarity_metric: str) -> None:
 
     assert (
         similarity_metric in avail_metrics
-    ), "{m} not supported. Available similarity metrics: {avail}".format(
-        m=similarity_metric, avail=avail_metrics
-    )
+    ), f"{similarity_metric} not supported. Available similarity metrics: {avail_metrics}"
 
 
 def check_replicate_summary_method(replicate_summary_method: str) -> None:
@@ -86,9 +82,7 @@ def check_replicate_summary_method(replicate_summary_method: str) -> None:
 
     if replicate_summary_method not in avail_methods:
         raise ValueError(
-            "{input} method not supported. Select one of: {avail}".format(
-                input=replicate_summary_method, avail=avail_methods
-            )
+            f"{replicate_summary_method} method not supported. Select one of: {avail_methods}"
         )
 
 
@@ -110,6 +104,4 @@ def check_compare_distribution_method(distribution_method: str) -> None:
 
     assert (
         distribution_method in avail_methods
-    ), "{m} not supported. Available distribution methods: {avail}".format(
-        m=distribution_method, avail=avail_methods
-    )
+    ), f"{distribution_method} not supported. Available distribution methods: {avail_methods}"

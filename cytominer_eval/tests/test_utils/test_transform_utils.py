@@ -72,10 +72,10 @@ def test_set_pair_ids():
 
     result = set_pair_ids()
 
-    assert result[pair_a]["index"] == "{pair_a}_index".format(pair_a=pair_a)
-    assert result[pair_a]["index"] == "{pair_a}_index".format(pair_a=pair_a)
-    assert result[pair_b]["suffix"] == "_{pair_b}".format(pair_b=pair_b)
-    assert result[pair_b]["suffix"] == "_{pair_b}".format(pair_b=pair_b)
+    assert result[pair_a]["index"] == f"{pair_a}_index"
+    assert result[pair_a]["index"] == f"{pair_a}_index"
+    assert result[pair_b]["suffix"] == f"_{pair_b}"
+    assert result[pair_b]["suffix"] == f"_{pair_b}"
 
 
 def test_check_replicate_groups():
@@ -115,9 +115,10 @@ def test_check_replicate_groups():
                 check_replicate_groups(
                     eval_metric=operation, replicate_groups=replicate_group_dict
                 )
-            assert "Replicate groups must be a list for the {op} operation".format(
-                op=operation
-            ) in str(ae.value)
+            assert (
+                f"Replicate groups must be a list for the {operation} operation"
+                in str(ae.value)
+            )
 
     with pytest.raises(AssertionError) as ae:
         wrong_group_dict = {"MISSING": "nothing here", "MISSING_TOO": "nothing"}

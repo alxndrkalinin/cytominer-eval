@@ -28,9 +28,7 @@ def test_set_grit_column_info():
         profile_col=profile_col, replicate_group_col=replicate_group_col
     )
 
-    assert result["profile"]["id"] == "{rep}_pair_a".format(rep=profile_col)
-    assert result["profile"]["comparison"] == "{rep}_pair_b".format(rep=profile_col)
-    assert result["group"]["id"] == "{group}_pair_a".format(group=replicate_group_col)
-    assert result["group"]["comparison"] == "{group}_pair_b".format(
-        group=replicate_group_col
-    )
+    assert result["profile"]["id"] == f"{profile_col}_pair_a"
+    assert result["profile"]["comparison"] == f"{profile_col}_pair_b"
+    assert result["group"]["id"] == f"{replicate_group_col}_pair_a"
+    assert result["group"]["comparison"] == f"{replicate_group_col}_pair_b"
