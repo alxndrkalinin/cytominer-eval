@@ -28,12 +28,10 @@ def calculate_precision_recall(replicate_group_df: pd.DataFrame, k: int) -> pd.S
 
     recall_denom__total_relevant_items = sum(replicate_group_df.group_replicate)
     precision_denom__num_recommended_items = k
+    if recall_denom__total_relevant_items == 0:
+        return pd.Series({"k": k, "precision": 0, "recall": 0})
 
-    num_recommended_items_at_k = sum(
-        replicate_group_df.iloc[
-            :k,
-        ].group_replicate
-    )
+    num_recommended_items_at_k = sum(replicate_group_df.iloc[:k,].group_replicate)
 
     precision_at_k = num_recommended_items_at_k / precision_denom__num_recommended_items
     recall_at_k = num_recommended_items_at_k / recall_denom__total_relevant_items
