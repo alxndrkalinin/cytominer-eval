@@ -25,7 +25,7 @@ def mp_value(
     features: List[str],
     params: dict = {},
 ) -> pd.DataFrame:
-    """Calculate multidimensional perturbation value (mp-value) [1]_.
+    """Calculate multidimensional perturbation value (mp-value) [1].
 
     Parameters
     ----------
@@ -46,20 +46,21 @@ def mp_value(
     pd.DataFrame
         mp-values per perturbation.
     """
-
     assert replicate_id in df.columns, "replicate_id not found in dataframe columns"
 
     # Extract features for control rows
-    control_df = df.loc[df.loc[:, replicate_id].isin(control_perts), features]
+    control_df = df[df[replicate_id].isin(control_perts)]
+    replicate_df = df[~df[replicate_id].isin(control_perts)]
 
     # Calculate mp_value for each perturbation
-    mp_value_df = pd.DataFrame(
-        df.groupby(replicate_id).apply(
-            lambda x: calculate_mp_value(x[features], control_df, params)
-        ),
-        columns=["mp_value"],
-    )
+    mp_value_dict = {}
+    for replicate_id, group_df in replicate_df.groupby(replicate_id):
+        mp_value = calculate_mp_value(group_df[features], control_df[features], params)
+        mp_value_dict[replicate_id] = mp_value
 
+    mp_value_df = pd.DataFrame(
+        list(mp_value_dict.items()), columns=[replicate_id, "mp_value"]
+    )
     mp_value_df.reset_index(inplace=True)
 
     return mp_value_df

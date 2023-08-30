@@ -138,7 +138,16 @@ def calculate_mp_value(
     # We reduce the dimensionality with PCA
     # so that 90% of the variance is conserved
     pca = PCA(n_components=0.9, svd_solver="full")
-    pca_array = pca.fit_transform(merge_df)
+
+    try:
+        pca_array = pca.fit_transform(merge_df)
+    except np.linalg.LinAlgError as err:
+        if "SVD did not converge" in str(err):
+            print(
+                "SVD did not converge: check that merged dataframe does not contain duplicate rows or columns."
+            )
+        raise err
+
     # We scale columns by the variance explained
     if p["rescale_pca"]:
         pca_array = pca_array * pca.explained_variance_ratio_
@@ -164,4 +173,4 @@ def calculate_mp_value(
         control_perm = pca_array[np.logical_not(pert_mask_perm)]
         sim[i] = calculate_mahalanobis(pert_df=pert_perm, control_df=control_perm)
 
-    return np.mean([x >= obs for x in sim])
+    return np.mean(sim >= obs)
