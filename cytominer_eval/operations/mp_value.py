@@ -20,10 +20,10 @@ from cytominer_eval.utils.mpvalue_utils import calculate_mp_value
 
 def mp_value(
     df: pd.DataFrame,
+    features: List[str],
     control_perts: List[str],
     replicate_id: str,
-    features: List[str],
-    params: dict = {},
+    kwargs: dict = {},
 ) -> pd.DataFrame:
     """Calculate multidimensional perturbation value (mp-value) [1].
 
@@ -46,6 +46,9 @@ def mp_value(
     pd.DataFrame
         mp-values per perturbation.
     """
+    assert isinstance(
+        replicate_id, str
+    ), "replicate_id must be a string with column name"
     assert replicate_id in df.columns, "replicate_id not found in dataframe columns"
 
     # Extract features for control rows
@@ -55,7 +58,9 @@ def mp_value(
     # Calculate mp_value for each perturbation
     mp_value_dict = {}
     for replicate_id, group_df in replicate_df.groupby(replicate_id):
-        mp_value = calculate_mp_value(group_df[features], control_df[features], params)
+        mp_value = calculate_mp_value(
+            group_df[features], control_df[features], **kwargs
+        )
         mp_value_dict[replicate_id] = mp_value
 
     mp_value_df = pd.DataFrame(

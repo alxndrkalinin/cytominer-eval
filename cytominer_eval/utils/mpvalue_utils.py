@@ -81,24 +81,11 @@ def calculate_mahalanobis(pert_df: pd.DataFrame, control_df: pd.DataFrame) -> pd
     return maha
 
 
-def default_mp_value_parameters():
-    """Set the different default parameters used for mp-values.
-
-    Returns
-    -------
-    dict
-        A default parameter set with keys: rescale_pca (whether the PCA should be
-        scaled by variance explained) and nb_permutations (how many permutations to
-        calculate empirical p-value). Defaults to True and 100, respectively.
-    """
-    params = {"rescale_pca": True, "nb_permutations": 100}
-    return params
-
-
 def calculate_mp_value(
     pert_df: pd.DataFrame,
     control_df: pd.DataFrame,
-    params: dict = {},
+    rescale_pca: bool = True,
+    nb_permutations: int = 100,
 ) -> pd.Series:
     """Given perturbation and control dataframes, calculate mp-value per perturbation
 
@@ -124,15 +111,6 @@ def calculate_mp_value(
     """
     assert len(control_df) > 1, "Error! No control perturbations found."
 
-    # Assign parameters
-    p = default_mp_value_parameters()
-
-    assert all(
-        [x in p.keys() for x in params.keys()]
-    ), f"Unknown parameters provided. Only {p.keys()} are supported."
-    for k, v in params.items():
-        p[k] = v
-
     merge_df = pd.concat([pert_df, control_df]).reset_index(drop=True)
 
     # We reduce the dimensionality with PCA
@@ -149,7 +127,7 @@ def calculate_mp_value(
         raise err
 
     # We scale columns by the variance explained
-    if p["rescale_pca"]:
+    if rescale_pca:
         pca_array = pca_array * pca.explained_variance_ratio_
     # This seems useless, as the point of using the Mahalanobis
     # distance instead of the Euclidean distance is to be independent
@@ -164,10 +142,10 @@ def calculate_mp_value(
     # might be modified to include variation of the perturbation as well.
 
     # Permutation test
-    sim = np.zeros(p["nb_permutations"])
+    sim = np.zeros(nb_permutations)
     pert_mask = np.zeros(pca_array.shape[0], dtype=bool)
     pert_mask[: pert_df.shape[0]] = 1
-    for i in range(p["nb_permutations"]):
+    for i in range(nb_permutations):
         pert_mask_perm = np.random.permutation(pert_mask)
         pert_perm = pca_array[pert_mask_perm]
         control_perm = pca_array[np.logical_not(pert_mask_perm)]

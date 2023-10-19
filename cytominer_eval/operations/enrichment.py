@@ -8,7 +8,8 @@ from cytominer_eval.utils.operation_utils import assign_replicates
 
 
 def enrichment(
-    similarity_melted_df: pd.DataFrame,
+    df: pd.DataFrame,
+    features: List[str],
     replicate_groups: List[str],
     percentile: Union[float, List[float]],
 ) -> pd.DataFrame:
@@ -18,7 +19,7 @@ def enrichment(
 
     Parameters
     ----------
-    similarity_melted_df : pandas.DataFrame
+    df : pandas.DataFrame
         An elongated symmetrical matrix indicating pairwise correlations between
         samples. Importantly, it must follow the exact structure as output from
         :py:func:`cytominer_eval.transform.transform.metric_melt`.
@@ -35,14 +36,14 @@ def enrichment(
     """
     result = []
     replicate_truth_df = assign_replicates(
-        similarity_melted_df=similarity_melted_df, replicate_groups=replicate_groups
+        similarity_melted_df=df, replicate_groups=replicate_groups
     )
     # loop over all percentiles
     if type(percentile) == float:
         percentile = [percentile]
     for p in percentile:
         # threshold based on percentile of top connections
-        threshold = similarity_melted_df.similarity_metric.quantile(p)
+        threshold = df.similarity_metric.quantile(p)
 
         # calculate the individual components of the contingency tables
         v11 = len(

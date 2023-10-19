@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import List, Union
+from typing import List, Union, Optional, Sequence
 import pandas.api.types as ptypes
 from collections import OrderedDict
 
@@ -118,7 +118,7 @@ def assert_melt(
         assert index_sums[0] == index_sums[1], assert_error
 
 
-def set_pair_ids():
+def set_pair_ids(pair_ids: Optional[Sequence[str]] = None):
     r"""Helper function to ensure consistent melted pairiwise column names
 
     Returns
@@ -126,9 +126,7 @@ def set_pair_ids():
     collections.OrderedDict
         A length two dictionary of suffixes and indeces of two pairs.
     """
-    pair_a = "pair_a"
-    pair_b = "pair_b"
-
+    pair_a, pair_b = ("pair_a", "pair_b") if pair_ids is None else pair_ids
     return_dict = OrderedDict()
     return_dict[pair_a] = {
         "index": f"{pair_a}_index",
@@ -181,6 +179,6 @@ def check_replicate_groups(
             replicate_groups, str
         ), "For mp_value, replicate_groups must be a single string."
     else:
-        assert isinstance(
+        assert isinstance(replicate_groups, dict) or isinstance(
             replicate_groups, list
         ), f"Replicate groups must be a list for the {eval_metric} operation"

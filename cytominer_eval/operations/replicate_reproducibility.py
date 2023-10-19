@@ -8,10 +8,12 @@ from cytominer_eval.utils.transform_utils import assert_melt
 
 
 def replicate_reproducibility(
-    similarity_melted_df: pd.DataFrame,
+    df: pd.DataFrame,
+    features: List[str],
     replicate_groups: List[str],
     quantile_over_null: float = 0.95,
     return_median_correlations: bool = False,
+    use_copairs: bool = False,
 ) -> float:
     r"""Summarize pairwise replicate correlations
 
@@ -20,7 +22,7 @@ def replicate_reproducibility(
 
     Parameters
     ----------
-    similarity_melted_df : pandas.DataFrame
+    df : pandas.DataFrame
         An elongated symmetrical matrix indicating pairwise correlations between
         samples. Importantly, it must follow the exact structure as output from
         :py:func:`cytominer_eval.transform.transform.metric_melt`.
@@ -46,22 +48,23 @@ def replicate_reproducibility(
         0 < quantile_over_null and 1 >= quantile_over_null
     ), "quantile_over_null must be between 0 and 1"
 
-    similarity_melted_df = assign_replicates(
-        similarity_melted_df=similarity_melted_df, replicate_groups=replicate_groups
-    )
+    if not use_copairs:
+        df = assign_replicates(
+            similarity_melted_df=df, replicate_groups=replicate_groups
+        )
 
-    # Check to make sure that the melted dataframe is upper triangle
-    assert_melt(similarity_melted_df, eval_metric="replicate_reproducibility")
+        # Check to make sure that the melted dataframe is upper triangle
+        assert_melt(df, eval_metric="replicate_reproducibility")
 
     # check that there are group_replicates (non-unique rows)
-    replicate_df = similarity_melted_df.query("group_replicate")
+    replicate_df = df.query("group_replicate")
     denom = replicate_df.shape[0]
 
     assert denom != 0, f"no replicate groups identified in {replicate_groups} columns!"
 
-    non_replicate_quantile = similarity_melted_df.query(
-        "not group_replicate"
-    ).similarity_metric.quantile(quantile_over_null)
+    non_replicate_quantile = df.query("not group_replicate").similarity_metric.quantile(
+        quantile_over_null
+    )
 
     replicate_reproducibility = (
         replicate_df.similarity_metric > non_replicate_quantile

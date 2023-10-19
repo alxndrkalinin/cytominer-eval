@@ -9,17 +9,19 @@ from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
 
 
 def precision_recall(
-    similarity_melted_df: pd.DataFrame,
+    df: pd.DataFrame,
+    features: List[str],
     replicate_groups: List[str],
     groupby_columns: List[str],
     k: Union[int, List[int]],
+    use_copairs: bool = False,
 ) -> pd.DataFrame:
     """Determine the precision and recall at k for all unique groupby_columns samples
     based on a predefined similarity metric (see cytominer_eval.transform.metric_melt)
 
     Parameters
     ----------
-    similarity_melted_df : pandas.DataFrame
+    df : pandas.DataFrame
         An elongated symmetrical matrix indicating pairwise correlations between
         samples. Importantly, it must follow the exact structure as output from
         :py:func:`cytominer_eval.transform.transform.metric_melt`.
@@ -39,31 +41,32 @@ def precision_recall(
     pandas.DataFrame
         precision and recall metrics for all groupby_column groups given k
     """
-    # Determine pairwise replicates and make sure to sort based on the metric!
-    similarity_melted_df = assign_replicates(
-        similarity_melted_df=similarity_melted_df, replicate_groups=replicate_groups
-    ).sort_values(by="similarity_metric", ascending=False)
+    if not use_copairs:
+        # Determine pairwise replicates and make sure to sort based on the metric!
+        df = assign_replicates(
+            similarity_melted_df=df, replicate_groups=replicate_groups
+        ).sort_values(by="similarity_metric", ascending=False)
 
-    # Check to make sure that the melted dataframe is full
-    assert_melt(similarity_melted_df, eval_metric="precision_recall")
+        # Check to make sure that the melted dataframe is full
+        assert_melt(df, eval_metric="precision_recall")
 
     # Extract out specific columns
     pair_ids = set_pair_ids()
-    groupby_cols_suffix = [
-        f"{x}{pair_ids[list(pair_ids)[0]]['suffix']}" for x in groupby_columns
-    ]
+    suffix = pair_ids[list(pair_ids)[0]]["suffix"]
+    groupby_cols_suffix = [f"{x}{suffix}" for x in groupby_columns]
     # iterate over all k
-    precision_recall_df = pd.DataFrame()
+    precision_recall_all_ks = []
     if type(k) == int:
         k = [k]
     for k_ in k:
         # Calculate precision and recall for all groups
-        precision_recall_df_at_k = similarity_melted_df.groupby(
-            groupby_cols_suffix
-        ).apply(lambda x: calculate_precision_recall(x, k=k_))
-        precision_recall_df = precision_recall_df.append(precision_recall_df_at_k)
+        precision_recall_df_at_k = df.groupby(groupby_cols_suffix).apply(
+            lambda x: calculate_precision_recall(x, k=k_)
+        )
+        precision_recall_all_ks.append(precision_recall_df_at_k)
 
+    precision_recall_all_ks = pd.concat(precision_recall_all_ks)
     # Rename the columns back to the replicate groups provided
     rename_cols = dict(zip(groupby_cols_suffix, groupby_columns))
 
-    return precision_recall_df.reset_index().rename(rename_cols, axis="columns")
+    return precision_recall_all_ks.reset_index().rename(rename_cols, axis="columns")

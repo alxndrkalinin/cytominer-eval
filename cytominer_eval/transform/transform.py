@@ -1,15 +1,22 @@
 import numpy as np
 import pandas as pd
-from typing import List
+from typing import List, Tuple, Optional, Union
+from itertools import chain
 
-from cytominer_eval.utils.availability_utils import (
-    check_similarity_metric,
-    check_eval_metric,
-)
+from cytominer_eval.utils.availability_utils import check_similarity_metric
 from cytominer_eval.utils.transform_utils import (
     assert_pandas_dtypes,
     get_upper_matrix,
     set_pair_ids,
+)
+
+from copairs.matching import dict_to_dframe
+from copairs.map import (
+    create_matcher,
+    compute_similarities,
+    flatten_str_list,
+    extract_filters,
+    apply_filters,
 )
 
 
@@ -33,6 +40,11 @@ def get_pairwise_metric(df: pd.DataFrame, similarity_metric: str) -> pd.DataFram
     check_similarity_metric(similarity_metric)
     df = assert_pandas_dtypes(df=df, col_fix=float)
 
+    # faster alternatives:
+    # 1) scipy.spatial.distance.pdist - compatible with all SciPy distances
+    #  it returns a condensed vector-form distance matrix,
+    #  which can be converted to the square format by scipy.spatial.distance.squareform
+    # 2) numpy.corrcoef – fastest for calculating correlations
     pair_df = df.transpose().corr(method=similarity_metric)
 
     # Check if the metric calculation went wrong
@@ -48,7 +60,7 @@ def get_pairwise_metric(df: pd.DataFrame, similarity_metric: str) -> pd.DataFram
 def process_melt(
     df: pd.DataFrame,
     meta_df: pd.DataFrame,
-    eval_metric: str = "replicate_reproducibility",
+    upper_triagonal: bool = False,
 ) -> pd.DataFrame:
     """Helper function to annotate and process an input similarity matrix
 
@@ -71,20 +83,14 @@ def process_melt(
     """
     # Confirm that the user formed the input arguments properly
     assert df.shape[0] == df.shape[1], "Matrix must be symmetrical"
-    check_eval_metric(eval_metric)
 
     # Get identifiers for pairing metadata
     pair_ids = set_pair_ids()
 
-    # Subset the pairwise similarity metric depending on the eval metric given:
-    #   "replicate_reproducibility" - requires only the upper triangle of a symmetric matrix
-    #   "precision_recall" - requires the full symmetric matrix (no diagonal)
-    # Remove pairwise matrix diagonal and redundant pairwise comparisons
-    if eval_metric == "replicate_reproducibility":
+    np.fill_diagonal(df.values, np.nan)
+    if upper_triagonal:
         upper_tri = get_upper_matrix(df)
         df = df.where(upper_tri)
-    else:
-        np.fill_diagonal(df.values, np.nan)
 
     # Convert pairwise matrix to melted (long) version based on index value
     metric_unlabeled_df = (
@@ -119,7 +125,7 @@ def metric_melt(
     df: pd.DataFrame,
     features: List[str],
     metadata_features: List[str],
-    eval_metric: str = "replicate_reproducibility",
+    upper_triagonal: bool = False,
     similarity_metric: str = "pearson",
 ) -> pd.DataFrame:
     """Helper function to fully transform an input dataframe of metadata and feature
@@ -165,6 +171,154 @@ def metric_melt(
     pair_df = get_pairwise_metric(df=df, similarity_metric=similarity_metric)
 
     # Convert pairwise matrix into metadata-labeled melted matrix
-    output_df = process_melt(df=pair_df, meta_df=meta_df, eval_metric=eval_metric)
+    output_df = process_melt(
+        df=pair_df, meta_df=meta_df, upper_triagonal=upper_triagonal
+    )
 
     return output_df
+
+
+def get_copairs_similarity(
+    meta: pd.DataFrame,
+    feats: np.ndarray,
+    pos_sameby: List[str],
+    pos_diffby: List[str],
+    neg_sameby: List[str],
+    neg_diffby: List[str],
+    multilabel_col: Optional[str] = None,
+    batch_size: int = 20000,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Get similarity scores for positive and negative pairs
+
+    Parameters
+    ----------
+    meta : pandas.DataFrame
+        Metadata dataframe
+    feats : numpy.ndarray
+        Feature matrix
+    pos_sameby : list
+        List of columns that have to match to make a positive pair
+    pos_diffby : list
+        List of columns that have to differ to make a positive pair
+    neg_sameby : list
+        List of columns that have to match to make a negative pair
+    neg_diffby : list
+        List of columns that have to differ to make a negative pair
+    multilabel_col : str, optional
+        Column to use for multilabel matching
+    batch_size : int, optional
+        Batch size for similarity calculation
+
+    Returns
+    -------
+    tuple(pandas.DataFrame, pandas.DataFrame)
+        Positive and negative similarity
+    """
+    pos_pairs, neg_pairs = get_copairs(
+        meta,
+        pos_sameby,
+        pos_diffby,
+        neg_sameby,
+        neg_diffby,
+        multilabel_col,
+    )
+
+    pos_pairs, neg_pairs = copairs_similarity(pos_pairs, neg_pairs, feats, batch_size)
+    return pos_pairs, neg_pairs
+
+
+def copairs_similarity(
+    pos_pairs: pd.DataFrame,
+    neg_pairs: pd.DataFrame,
+    feats: np.ndarray,
+    batch_size: int = 20000,
+):
+    """Compute similarity for positive and negative pairs
+
+    Parameters
+    ----------
+    pos_pairs : pandas.DataFrame
+        Positive pairs
+    neg_pairs : pandas.DataFrame
+        Negative pairs
+    feats : numpy.ndarray
+        Feature matrix
+    batch_size : int
+        Batch size for similarity calculation
+
+    Returns
+    -------
+    tuple(pandas.DataFrame, pandas.DataFrame)
+        Positive and negative similarity
+    """
+    pos_pairs = compute_similarities(pos_pairs, feats, batch_size)
+    neg_pairs = compute_similarities(neg_pairs, feats, batch_size)
+    return pos_pairs, neg_pairs
+
+
+def get_copairs(
+    meta: pd.DataFrame,
+    pos_sameby: List[str],
+    pos_diffby: List[str],
+    neg_sameby: List[str],
+    neg_diffby: List[str],
+    filters: Optional[Union[List[str], str]] = None,
+    multilabel_col: Optional[str] = None,
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Get positive and negative pairs
+
+    Parameters
+    ----------
+    meta : pandas.DataFrame
+        Metadata dataframe
+    pos_sameby : list
+        List of columns that have to match to make a positive pair
+    pos_diffby : list
+        List of columns that have to differ to make a positive pair
+    neg_sameby : list
+        List of columns that have to match to make a negative pair
+    neg_diffby : list
+        List of columns that have to differ to make a negative pair
+    filters : list, optional
+        List of filters to apply to the metadata dataframe
+    multilabel_col : str, optional
+        Column to use for multilabel matching
+
+    Returns
+    -------
+    tuple(pandas.DataFrame, pandas.DataFrame)
+        Positive and negative pairs
+    """
+    meta = meta.reset_index(drop=True).copy()
+
+    # generic filters that do not affect matching
+    if filters is not None:
+        query_list, _ = extract_filters(filters, meta.columns)
+        meta = apply_filters(meta, query_list)
+
+    pos_columns = flatten_str_list(pos_sameby, pos_diffby)
+    neg_columns = flatten_str_list(neg_sameby, neg_diffby)
+
+    if all(c in meta.columns for c in pos_columns + neg_columns):
+        matcher = create_matcher(
+            meta, pos_sameby, pos_diffby, neg_sameby, neg_diffby, multilabel_col
+        )
+
+        pos_pairs = matcher.get_all_pairs(sameby=pos_sameby, diffby=pos_diffby)
+        pos_pairs = dict_to_dframe(pos_pairs, pos_sameby)
+
+        neg_pairs = matcher.get_all_pairs(sameby=neg_sameby, diffby=neg_diffby)
+        neg_pairs = set(chain.from_iterable(neg_pairs.values()))
+        neg_pairs = pd.DataFrame(neg_pairs, columns=["ix1", "ix2"])
+
+    else:
+        matcher = create_matcher(meta, pos_sameby, pos_diffby, [], [], multilabel_col)
+        pos_pairs = matcher.get_all_pairs(sameby=pos_sameby, diffby=pos_diffby)
+        pos_pairs = dict_to_dframe(pos_pairs, pos_sameby)
+
+        matcher = create_matcher(meta, [], [], neg_sameby, neg_diffby, multilabel_col)
+        neg_pairs = matcher.get_all_pairs(sameby=neg_sameby, diffby=neg_diffby)
+        neg_pairs = set(chain.from_iterable(neg_pairs.values()))
+        neg_pairs = pd.DataFrame(neg_pairs, columns=["ix1", "ix2"])
+
+    return pos_pairs, neg_pairs

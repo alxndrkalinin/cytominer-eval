@@ -9,7 +9,8 @@ from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
 
 
 def hitk(
-    similarity_melted_df: pd.DataFrame,
+    df: pd.DataFrame,
+    features: List[str],
     replicate_groups: List[str],
     groupby_columns: List[str],
     percent_list: Union[int, List[int]],
@@ -25,7 +26,7 @@ def hitk(
 
     Parameters
     ----------
-    similarity_melted_df : pandas.DataFrame
+    df : pandas.DataFrame
         An elongated symmetrical matrix indicating pairwise correlations between
         samples. Importantly, it must follow the exact structure as output from
         :py:func:`cytominer_eval.transform.transform.metric_melt`.
@@ -34,7 +35,7 @@ def hitk(
         a list of metadata column names in the original profile dataframe to use as replicate columns.
 
     groupby_columns: str
-        group columns determine the columns over which the similarity_melted_df is grouped.
+        group columns determine the columns over which the df is grouped.
         Usually groupby_columns will span the full space of the input data
         such that drop_duplicates by the groupby_cols would not change the data.
         If you group over Metadata_plate for examples, you will get meaningless results.
@@ -60,11 +61,9 @@ def hitk(
     if type(percent_list) == list:
         assert max(percent_list) <= 100, "percentages must be smaller than 100"
 
-    similarity_melted_df = assign_replicates(
-        similarity_melted_df=similarity_melted_df, replicate_groups=replicate_groups
-    )
+    df = assign_replicates(similarity_melted_df=df, replicate_groups=replicate_groups)
     # Check to make sure that the melted dataframe is full
-    assert_melt(similarity_melted_df, eval_metric="hitk")
+    assert_melt(df, eval_metric="hitk")
 
     # Extract the name of the columns in the sim_df
     pair_ids = set_pair_ids()
@@ -73,7 +72,7 @@ def hitk(
     ]
 
     # group the sim_df by the groupby_columns
-    grouped = similarity_melted_df.groupby(groupby_cols_suffix)
+    grouped = df.groupby(groupby_cols_suffix)
     nr_of_groups = grouped.ngroups
     # Within each group, add the ranks of each connection to a new column
     similarity_melted_with_rank = grouped.apply(lambda x: add_hit_rank(x))
