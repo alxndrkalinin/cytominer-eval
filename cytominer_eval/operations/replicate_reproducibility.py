@@ -1,16 +1,15 @@
 """Functions to calculate replicate reproducibility."""
 
 import pandas as pd
-from typing import List
+from typing import List, Optional
 
-from cytominer_eval.utils.operation_utils import assign_replicates, set_pair_ids
+from cytominer_eval.utils.operation_utils import set_pair_ids
 from cytominer_eval.utils.transform_utils import assert_melt
 
 
 def replicate_reproducibility(
     df: pd.DataFrame,
-    features: List[str],
-    replicate_groups: List[str],
+    replicate_groups: Optional[List[str]] = None,
     quantile_over_null: float = 0.95,
     return_median_correlations: bool = False,
     use_copairs: bool = False,
@@ -43,16 +42,14 @@ def replicate_reproducibility(
         columns provided. If `return_median_correlations = True` then the function will
         return both the metric and a median pairwise correlation pandas.DataFrame.
     """
+    if replicate_groups is None:
+        raise ValueError("replicate_groups kwarg must be provided")
 
     assert (
         0 < quantile_over_null and 1 >= quantile_over_null
     ), "quantile_over_null must be between 0 and 1"
 
     if not use_copairs:
-        df = assign_replicates(
-            similarity_melted_df=df, replicate_groups=replicate_groups
-        )
-
         # Check to make sure that the melted dataframe is upper triangle
         assert_melt(df, eval_metric="replicate_reproducibility")
 

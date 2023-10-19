@@ -4,14 +4,11 @@ import pandas as pd
 from typing import List, Union
 
 from cytominer_eval.utils.precisionrecall_utils import calculate_precision_recall
-from cytominer_eval.utils.operation_utils import assign_replicates
 from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
 
 
 def precision_recall(
     df: pd.DataFrame,
-    features: List[str],
-    replicate_groups: List[str],
     groupby_columns: List[str],
     k: Union[int, List[int]],
     use_copairs: bool = False,
@@ -25,8 +22,6 @@ def precision_recall(
         An elongated symmetrical matrix indicating pairwise correlations between
         samples. Importantly, it must follow the exact structure as output from
         :py:func:`cytominer_eval.transform.transform.metric_melt`.
-    replicate_groups : List
-        a list of metadata column names in the original profile dataframe to use as replicate columns.
     groupby_columns : List of str
         Column by which the similarity matrix is grouped and by which the precision/recall is calculated.
         For example, if groupby_column = Metadata_sample then the precision is calculated for each sample.
@@ -42,11 +37,8 @@ def precision_recall(
         precision and recall metrics for all groupby_column groups given k
     """
     if not use_copairs:
-        # Determine pairwise replicates and make sure to sort based on the metric!
-        df = assign_replicates(
-            similarity_melted_df=df, replicate_groups=replicate_groups
-        ).sort_values(by="similarity_metric", ascending=False)
-
+        # Make sure to sort based on the metric!
+        df.sort_values(by="similarity_metric", ascending=False)
         # Check to make sure that the melted dataframe is full
         assert_melt(df, eval_metric="precision_recall")
 

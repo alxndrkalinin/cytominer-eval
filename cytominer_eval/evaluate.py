@@ -8,6 +8,7 @@ from typing import List, Union, Optional
 from itertools import chain
 
 from cytominer_eval.transform import metric_melt, get_copairs, copairs_similarity
+from cytominer_eval.utils.operation_utils import assign_replicates
 from cytominer_eval.operations import (
     replicate_reproducibility,
     precision_recall,
@@ -22,10 +23,10 @@ from copairs.map import flatten_str_list, extract_filters
 
 def mp_value_copairs(
     df,
-    features,
     control_perts,
-    replicate_groups,
     replicate_id,
+    features=None,
+    replicate_groups=None,
     rescale_pca=True,
     nb_permutations=100,
     use_copairs=False,
@@ -173,7 +174,7 @@ def build_similarity_df(
     features,
     meta_features,
     replicate_groups,
-    similarity_metric,
+    distance_metric,
     operation,
     use_copairs,
     upper_triagonal=False,
@@ -186,13 +187,13 @@ def build_similarity_df(
                 df=profiles,
                 features=features,
                 metadata_features=meta_features,
-                similarity_metric=similarity_metric,
+                similarity_metric=distance_metric,
                 upper_triagonal=upper_triagonal,
             )
 
     elif use_copairs:
         similarity_df = get_copairs_similarity_df(
-            profiles, features, meta_features, replicate_groups, similarity_metric
+            profiles, features, meta_features, replicate_groups, operation
         )
 
     return similarity_df
@@ -205,7 +206,7 @@ def evaluate_operation(
     replicate_groups: Union[List[str], dict],
     operation: str,
     operation_kwargs: dict,
-    similarity_metric: str = "pearson",
+    distance_metric: str = "pearson",
     use_copairs: bool = False,
     similarity_df: Optional[pd.DataFrame] = None,
 ):
@@ -219,16 +220,27 @@ def evaluate_operation(
             features=features,
             meta_features=meta_features,
             replicate_groups=replicate_groups,
-            similarity_metric=similarity_metric,
+            distance_metric=distance_metric,
             operation=operation,
             use_copairs=use_copairs,
             upper_triagonal=upper_triagonal,
         )
 
+    if (
+        (not use_copairs)
+        and ("group_replicate" not in similarity_df.columns)
+        and (operation != "mp_value")
+    ):
+        similarity_df = assign_replicates(
+            similarity_melted_df=similarity_df, replicate_groups=replicate_groups
+        )
+
+    if operation == "mp_value":
+        operation_kwargs["features"] = features
+        operation_kwargs["replicate_groups"] = replicate_groups
+
     metric_result = metric_fn(
         df=similarity_df,
-        features=features,
-        replicate_groups=replicate_groups,
         **operation_kwargs,
     )
 
@@ -240,20 +252,10 @@ def evaluate(
     features: List[str],
     meta_features: List[str],
     replicate_groups: Union[List[str], dict],
-    operation_list: List[str],
-    operation_kwargs: Optional[List[dict]] = None,
-    similarity_metric: str = "pearson",
+    metrics_config: dict,
+    distance_metric: str = "pearson",
     use_copairs: bool = False,
     copairs_kwargs: Optional[dict] = None,
-    # groupby_columns: List[str] = ["Metadata_broad_sample"],
-    # replicate_reproducibility_quantile: float = 0.95,
-    # replicate_reproducibility_return_median_cor: bool = False,
-    # precision_recall_k: Union[int, List[int]] = 10,
-    # grit_control_perts: List[str] = ["None"],
-    # grit_replicate_summary_method: str = "mean",
-    # mp_value_params: dict = {},
-    # enrichment_percentile: Union[float, List[float]] = 0.99,
-    # hitk_percent_list=[2, 5, 10],
 ):
     r"""Evaluate profile quality and strength.
 
@@ -338,35 +340,23 @@ def evaluate(
         If percent_list == "all" a full dict with the length of classes will be created.
         Percentages are given as integers, ie 50 means 50 %.
     """
-    # Check replicate groups input
-    # check_replicate_groups(eval_metric=operation, replicate_groups=replicate_groups)
-
-    # make `replicate_reproducibility` first for easier reuse of similarity_df
-    if "replicate_reproducibility" in operation_list:
-        operation_list = ["replicate_reproducibility"] + [
-            op for op in operation_list if op != "replicate_reproducibility"
-        ]
-    # make `mp_values` last for easier reuse of similarity_df
-    if "mp_value" in operation_list:
-        operation_list = [op for op in operation_list if op != "mp_value"] + [
-            "mp_value"
-        ]
-
-    operation_kwargs = (
-        operation_kwargs if operation_kwargs is not None else [{}] * len(operation_list)
-    )
+    # make `replicate_reproducibility` first and `mp_value` last for easier reuse of similarity_df
+    edge_keys = ["replicate_reproducibility", "mp_value"]
+    key_order = sorted(k for k in metrics_config if k not in edge_keys)
+    key_order = [edge_keys[0], *key_order, edge_keys[-1]]
+    metrics_config = {k: metrics_config[k] for k in key_order if k in metrics_config}
 
     similarity_df = None
     metric_results = []
-    for operation in operation_list:
+    for operation, operation_kwargs in metrics_config.items():
         metric_result, similarity_df = evaluate_operation(
             profiles=profiles,
             features=features,
             meta_features=meta_features,
             replicate_groups=replicate_groups,
             operation=operation,
-            operation_kwargs=operation_kwargs[operation_list.index(operation)],
-            similarity_metric=similarity_metric,
+            operation_kwargs=operation_kwargs,
+            distance_metric=distance_metric,
             use_copairs=use_copairs,
             similarity_df=similarity_df,
         )
@@ -377,51 +367,3 @@ def evaluate(
         )
 
     return metric_results
-
-    # Perform the input operation
-    # if operation == "replicate_reproducibility":
-    #     metric_result = replicate_reproducibility(
-    #         df=similarity_melted_df,
-    #         replicate_groups=replicate_groups,
-    #         quantile_over_null=replicate_reproducibility_quantile,
-    #         return_median_correlations=replicate_reproducibility_return_median_cor,
-    #         use_copairs=use_copairs,
-    #     )
-    # elif operation == "precision_recall":
-    #     metric_result = precision_recall(
-    #         df=similarity_melted_df,
-    #         replicate_groups=replicate_groups,
-    #         groupby_columns=groupby_columns,
-    #         k=precision_recall_k,
-    #         use_copairs=use_copairs,
-    #     )
-    # elif operation == "grit":
-    #     metric_result = grit(
-    #         df=similarity_melted_df,
-    #         control_perts=grit_control_perts,
-    #         profile_col=replicate_groups["profile_col"],
-    #         replicate_group_col=replicate_groups["replicate_group_col"],
-    #         replicate_summary_method=grit_replicate_summary_method,
-    #     )
-    # elif operation == "mp_value" and not use_copairs:
-    #     metric_result = mp_value(
-    #         df=profiles,
-    #         control_perts=grit_control_perts,
-    #         replicate_id=replicate_groups,
-    #         features=features,
-    #         params=mp_value_params
-    #     )
-    # elif operation == "enrichment":
-    #     metric_result = enrichment(
-    #         df=similarity_melted_df,
-    #         replicate_groups=replicate_groups,
-    #         percentile=enrichment_percentile,
-    #     )
-    # elif operation == "hitk":
-    #     metric_result = hitk(
-    #         df=similarity_melted_df,
-    #         replicate_groups=replicate_groups,
-    #         groupby_columns=groupby_columns,
-    #         percent_list=hitk_percent_list,
-    #     )
-    # return metric_result

@@ -5,20 +5,18 @@
 - Similarity to control perturbations
 """
 import pandas as pd
-from typing import List
+from typing import List, Optional
 
 from cytominer_eval.utils.availability_utils import check_replicate_summary_method
-from cytominer_eval.utils.operation_utils import assign_replicates
 from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
 from cytominer_eval.utils.grit_utils import set_grit_column_info, calculate_grit
 
 
 def grit(
     df: pd.DataFrame,
-    features: List[str],
     control_perts: List[str],
-    profile_col: str,
-    replicate_group_col: str,
+    profile_col: Optional[str] = None,
+    replicate_group_col: Optional[str] = None,
     replicate_summary_method: str = "mean",
 ) -> pd.DataFrame:
     r"""Calculate grit
@@ -43,14 +41,11 @@ def grit(
     pandas.DataFrame
         A dataframe of grit measurements per perturbation
     """
+    if profile_col is None or replicate_group_col is None:
+        raise ValueError("profile_col and replicate_group_col must be provided")
+
     # Check if we support the provided summary method
     check_replicate_summary_method(replicate_summary_method)
-
-    # Determine pairwise replicates
-    df = assign_replicates(
-        similarity_melted_df=df,
-        replicate_groups=[profile_col, replicate_group_col],
-    )
 
     # Check to make sure that the melted dataframe is full
     assert_melt(df, eval_metric="grit")

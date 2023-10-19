@@ -4,14 +4,11 @@ from typing import List, Union
 
 
 from cytominer_eval.utils.hitk_utils import add_hit_rank, percentage_scores
-from cytominer_eval.utils.operation_utils import assign_replicates
 from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
 
 
 def hitk(
     df: pd.DataFrame,
-    features: List[str],
-    replicate_groups: List[str],
     groupby_columns: List[str],
     percent_list: Union[int, List[int]],
 ) -> pd.DataFrame:
@@ -30,9 +27,6 @@ def hitk(
         An elongated symmetrical matrix indicating pairwise correlations between
         samples. Importantly, it must follow the exact structure as output from
         :py:func:`cytominer_eval.transform.transform.metric_melt`.
-
-    replicate_groups : list or int
-        a list of metadata column names in the original profile dataframe to use as replicate columns.
 
     groupby_columns: str
         group columns determine the columns over which the df is grouped.
@@ -61,7 +55,6 @@ def hitk(
     if type(percent_list) == list:
         assert max(percent_list) <= 100, "percentages must be smaller than 100"
 
-    df = assign_replicates(similarity_melted_df=df, replicate_groups=replicate_groups)
     # Check to make sure that the melted dataframe is full
     assert_melt(df, eval_metric="hitk")
 
