@@ -4,7 +4,6 @@ import pandas as pd
 from typing import List, Optional
 
 from cytominer_eval.utils.operation_utils import set_pair_ids
-from cytominer_eval.utils.transform_utils import assert_melt
 
 
 def replicate_reproducibility(
@@ -48,10 +47,6 @@ def replicate_reproducibility(
     assert (
         0 < quantile_over_null and 1 >= quantile_over_null
     ), "quantile_over_null must be between 0 and 1"
-
-    if not use_copairs:
-        # Check to make sure that the melted dataframe is upper triangle
-        assert_melt(df, eval_metric="replicate_reproducibility")
 
     # check that there are group_replicates (non-unique rows)
     replicate_df = df.query("group_replicate")

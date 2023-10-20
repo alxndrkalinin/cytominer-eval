@@ -9,6 +9,7 @@ from itertools import chain
 
 from cytominer_eval.transform import metric_melt, get_copairs, copairs_similarity
 from cytominer_eval.utils.operation_utils import assign_replicates
+from cytominer_eval.utils.transform_utils import assert_melt
 from cytominer_eval.operations import (
     replicate_reproducibility,
     precision_recall,
@@ -191,6 +192,13 @@ def build_similarity_df(
                 upper_triagonal=upper_triagonal,
             )
 
+            if "group_replicate" not in similarity_df.columns:
+                similarity_df = assign_replicates(
+                    similarity_melted_df=similarity_df,
+                    replicate_groups=replicate_groups,
+                )
+                assert_melt(similarity_df, eval_metric=operation)
+
     elif use_copairs:
         similarity_df = get_copairs_similarity_df(
             profiles, features, meta_features, replicate_groups, operation
@@ -224,15 +232,6 @@ def evaluate_operation(
             operation=operation,
             use_copairs=use_copairs,
             upper_triagonal=upper_triagonal,
-        )
-
-    if (
-        (not use_copairs)
-        and ("group_replicate" not in similarity_df.columns)
-        and (operation != "mp_value")
-    ):
-        similarity_df = assign_replicates(
-            similarity_melted_df=similarity_df, replicate_groups=replicate_groups
         )
 
     if operation == "mp_value":

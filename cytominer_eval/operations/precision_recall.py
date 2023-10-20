@@ -4,7 +4,7 @@ import pandas as pd
 from typing import List, Union
 
 from cytominer_eval.utils.precisionrecall_utils import calculate_precision_recall
-from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
+from cytominer_eval.utils.transform_utils import set_pair_ids
 
 
 def precision_recall(
@@ -36,11 +36,7 @@ def precision_recall(
     pandas.DataFrame
         precision and recall metrics for all groupby_column groups given k
     """
-    if not use_copairs:
-        # Make sure to sort based on the metric!
-        df.sort_values(by="similarity_metric", ascending=False)
-        # Check to make sure that the melted dataframe is full
-        assert_melt(df, eval_metric="precision_recall")
+    df.sort_values(by="similarity_metric", ascending=False)
 
     # Extract out specific columns
     pair_ids = set_pair_ids()

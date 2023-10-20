@@ -8,7 +8,7 @@ import pandas as pd
 from typing import List, Optional
 
 from cytominer_eval.utils.availability_utils import check_replicate_summary_method
-from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
+from cytominer_eval.utils.transform_utils import set_pair_ids
 from cytominer_eval.utils.grit_utils import set_grit_column_info, calculate_grit
 
 
@@ -46,9 +46,6 @@ def grit(
 
     # Check if we support the provided summary method
     check_replicate_summary_method(replicate_summary_method)
-
-    # Check to make sure that the melted dataframe is full
-    assert_melt(df, eval_metric="grit")
 
     # Extract out specific columns
     pair_ids = set_pair_ids()

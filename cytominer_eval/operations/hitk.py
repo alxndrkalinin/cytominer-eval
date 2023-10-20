@@ -4,7 +4,7 @@ from typing import List, Union
 
 
 from cytominer_eval.utils.hitk_utils import add_hit_rank, percentage_scores
-from cytominer_eval.utils.transform_utils import set_pair_ids, assert_melt
+from cytominer_eval.utils.transform_utils import set_pair_ids
 
 
 def hitk(
@@ -54,9 +54,6 @@ def hitk(
     assert type(percent_list) == list or percent_list == "all", "input is incorrect"
     if type(percent_list) == list:
         assert max(percent_list) <= 100, "percentages must be smaller than 100"
-
-    # Check to make sure that the melted dataframe is full
-    assert_melt(df, eval_metric="hitk")
 
     # Extract the name of the columns in the sim_df
     pair_ids = set_pair_ids()
