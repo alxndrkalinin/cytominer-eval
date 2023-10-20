@@ -156,7 +156,7 @@ def get_copairs_similarity_df(
         neg_clique_intersect = set.intersection(*map(set, neg_cliques))
         assert (
             len(neg_clique_intersect) > 0
-        ), "Error! No overlapping negative cliques found."
+        ), "Error! No overlapping negative cliques found, check neg sameby/diffby."
         assert (
             len(set(chain.from_iterable(pos_cliques)) & neg_clique_intersect) == 0
         ), "Error! Positive and negative cliques overlap."
@@ -207,7 +207,7 @@ def build_similarity_df(
     return similarity_df
 
 
-def evaluate_operation(
+def evaluate_metric(
     profiles: pd.DataFrame,
     features: List[str],
     meta_features: List[str],
@@ -238,15 +238,14 @@ def evaluate_operation(
         operation_kwargs["features"] = features
         operation_kwargs["replicate_groups"] = replicate_groups
 
-    metric_result = metric_fn(
-        df=similarity_df,
-        **operation_kwargs,
-    )
+    metric_result = metric_fn(df=similarity_df, **operation_kwargs)
 
+    if operation == "replicate_reproducibility" and not use_copairs:
+        similarity_df = None
     return metric_result, similarity_df
 
 
-def evaluate(
+def evaluate_metrics(
     profiles: pd.DataFrame,
     features: List[str],
     meta_features: List[str],
@@ -255,6 +254,7 @@ def evaluate(
     distance_metric: str = "pearson",
     use_copairs: bool = False,
     copairs_kwargs: Optional[dict] = None,
+    similarity_df: Optional[pd.DataFrame] = None,
 ):
     r"""Evaluate profile quality and strength.
 
@@ -340,15 +340,16 @@ def evaluate(
         Percentages are given as integers, ie 50 means 50 %.
     """
     # make `replicate_reproducibility` first and `mp_value` last for easier reuse of similarity_df
-    edge_keys = ["replicate_reproducibility", "mp_value"]
-    key_order = sorted(k for k in metrics_config if k not in edge_keys)
-    key_order = [edge_keys[0], *key_order, edge_keys[-1]]
+    first_last_keys = ["replicate_reproducibility", "mp_value"]
+    key_order = sorted(k for k in metrics_config if k not in first_last_keys)
+    key_order = [first_last_keys[0], *key_order, first_last_keys[-1]]
     metrics_config = {k: metrics_config[k] for k in key_order if k in metrics_config}
 
-    similarity_df = None
+    # similarity_df = None
     metric_results = []
     for operation, operation_kwargs in metrics_config.items():
-        metric_result, similarity_df = evaluate_operation(
+        print(f"\nCalculating metric: {operation}")
+        metric_result, similarity_df = evaluate_metric(
             profiles=profiles,
             features=features,
             meta_features=meta_features,
@@ -360,9 +361,5 @@ def evaluate(
             similarity_df=similarity_df,
         )
         metric_results.append(metric_result)
-
-        similarity_df = (
-            None if operation == "replicate_reproducibility" else similarity_df
-        )
 
     return metric_results
