@@ -3,7 +3,7 @@ channels:
 - conda-forge
 dependencies:
 - conda-forge::python=3.8
-- conda-forge::pandas=1.2.0
+- conda-forge::pandas>=1.2.0
 - conda-forge::numpy
 - conda-forge::scikit-learn
 - conda-forge::umap-learn
@@ -16,7 +16,7 @@ dependencies:
 - conda-forge::nb_conda_kernels
 - conda-forge::simplegeneric
 - conda-forge::pytest
-- conda-forge::black
+- conda-forge::black[jupyter]
 - pip:
   - cytominer_eval==0.1
-  - git+https://github.com/cytomining/pycytominer@282966b24bb5c6ac5150fad9deba16156c83a826
+  - git+https://github.com/cytomining/pycytominer@09b2c79aa94908e3520f0931a844db4fba7fd3fb
