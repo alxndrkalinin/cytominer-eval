@@ -57,11 +57,11 @@ def mp_value(
 
     # Calculate mp_value for each perturbation
     mp_value_dict = {}
-    for replicate_id, group_df in replicate_df.groupby(replicate_id):
+    for replicate_id_name, group_df in replicate_df.groupby(replicate_id):
         mp_value = calculate_mp_value(
             group_df[features], control_df[features], **kwargs
         )
-        mp_value_dict[replicate_id] = mp_value
+        mp_value_dict[replicate_id_name] = mp_value
 
     mp_value_df = pd.DataFrame(
         list(mp_value_dict.items()), columns=[replicate_id, "mp_value"]

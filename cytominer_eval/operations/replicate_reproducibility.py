@@ -11,7 +11,6 @@ def replicate_reproducibility(
     replicate_groups: Optional[List[str]] = None,
     quantile_over_null: float = 0.95,
     return_median_correlations: bool = False,
-    use_copairs: bool = False,
 ) -> float:
     r"""Summarize pairwise replicate correlations
 
