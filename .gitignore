@@ -7,3 +7,4 @@ dist/
 .eggs/
 cytominer_eval.egg-info/
 .vscode
+*.csv
