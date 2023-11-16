@@ -11,9 +11,9 @@ from cytominer_eval.utils.transform_utils import (
 )
 
 from copairs.matching import dict_to_dframe
+from copairs.compute import pairwise_cosine
 from copairs.map import (
     create_matcher,
-    compute_similarities,
     flatten_str_list,
     extract_filters,
     apply_filters,
@@ -251,8 +251,10 @@ def copairs_similarity(
     tuple(pandas.DataFrame, pandas.DataFrame)
         Positive and negative similarity
     """
-    pos_pairs = compute_similarities(pos_pairs, feats, batch_size)
-    neg_pairs = compute_similarities(neg_pairs, feats, batch_size)
+    pos_sim = pairwise_cosine(feats, pos_pairs[["ix1", "ix2"]].values, batch_size)
+    pos_pairs["dist"] = pos_sim
+    neg_sim = pairwise_cosine(feats, neg_pairs[["ix1", "ix2"]].values, batch_size)
+    neg_pairs["dist"] = neg_sim
     return pos_pairs, neg_pairs
 
 
@@ -320,5 +322,8 @@ def get_copairs(
         neg_pairs = matcher.get_all_pairs(sameby=neg_sameby, diffby=neg_diffby)
         neg_pairs = set(chain.from_iterable(neg_pairs.values()))
         neg_pairs = pd.DataFrame(neg_pairs, columns=["ix1", "ix2"])
+        print(
+            f"Pos pairs size: {pos_pairs.shape[0]}, Neg pairs size: {neg_pairs.shape[0]}"
+        )
 
     return pos_pairs, neg_pairs
