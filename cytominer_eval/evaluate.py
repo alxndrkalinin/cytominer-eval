@@ -2,10 +2,11 @@
 
 The primary entrypoint into quickly evaluating profile quality.
 """
+from collections import defaultdict
+from typing import List, Union, Optional
+
 import pandas as pd
 import networkx as nx
-from typing import List, Union, Optional
-from itertools import chain
 
 from cytominer_eval.transform import metric_melt, get_copairs, copairs_similarity
 from cytominer_eval.utils.operation_utils import assign_replicates
@@ -31,6 +32,7 @@ def mp_value_copairs(
     rescale_pca=True,
     nb_permutations=100,
     use_copairs=False,
+    control_pert_filter=None,
 ):
     if use_copairs:
         control_perts = [-1]
@@ -41,6 +43,7 @@ def mp_value_copairs(
         control_perts=control_perts,
         replicate_id=replicate_id,
         features=features,
+        control_pert_filter=control_pert_filter,
         kwargs={"rescale_pca": rescale_pca, "nb_permutations": nb_permutations},
     )
 
@@ -110,6 +113,29 @@ def get_pos_neg_pairs(metadata, replicate_groups):
     return pos_pairs, neg_pairs
 
 
+def map_neg_pos_cliques(pos_cliques, neg_cliques):
+    # create a reverse lookup dictionary for neg_cliques
+    neg_lookup = defaultdict(list)
+    for nc in neg_cliques:
+        for elem in nc:
+            neg_lookup[elem].extend(nc)
+
+    # flatten the lists in neg_lookup and remove duplicates
+    for key in neg_lookup:
+        neg_lookup[key] = list(set(neg_lookup[key]))
+
+    clique_dict = {}
+    for index, pos_clique in enumerate(pos_cliques):
+        # collect all unique neg_clique elements for each pos_clique
+        neg_elements = set()
+        for elem in pos_clique:
+            neg_elements.update(neg_lookup.get(elem, []))
+        # remove any element from neg_elements that is in pos_clique to avoid self-reference
+        clique_dict[index] = sorted(neg_elements.difference(pos_clique))
+
+    return clique_dict
+
+
 def get_copairs_similarity_df(
     profiles, features, meta_features, replicate_groups, operation
 ):
@@ -153,19 +179,14 @@ def get_copairs_similarity_df(
         neg_graph = nx.Graph()
         neg_graph.add_edges_from(neg_pairs[["ix1", "ix2"]].values.tolist())
         neg_cliques = list(nx.find_cliques(neg_graph))
-        neg_clique_intersect = set.intersection(*map(set, neg_cliques))
-        assert (
-            len(neg_clique_intersect) > 0
-        ), "Error! No overlapping negative cliques found, check neg sameby/diffby."
-        assert (
-            len(set(chain.from_iterable(pos_cliques)) & neg_clique_intersect) == 0
-        ), "Error! Positive and negative cliques overlap."
+        pos_to_neg_map = map_neg_pos_cliques(pos_cliques, neg_cliques)
 
         profiles["clique_id"] = pd.NA
         for idx, clique in enumerate(pos_cliques):
-            profiles.loc[profiles.index.isin(clique), "clique_id"] = idx
-        profiles.loc[profiles.index.isin(neg_clique_intersect), "clique_id"] = -1
-        similarity_df = profiles.dropna(axis=0, subset=["clique_id"])
+            profiles.loc[clique, "clique_id"] = idx
+            profiles.loc[pos_to_neg_map[idx], "clique_id"] = -1
+
+        similarity_df = profiles.dropna(axis=0, subset=["clique_id"]), pos_to_neg_map
 
     return similarity_df
 
@@ -220,9 +241,9 @@ def evaluate_metric(
 ):
     metric_fn = get_operation_fn(operation)
     upper_triagonal = operation == "replicate_reproducibility"
-    similarity_df = similarity_df if operation != "mp_value" else None
 
-    if similarity_df is None:
+    if similarity_df is None or operation == "mp_value":
+        print("\nCalculating distances.")
         similarity_df = build_similarity_df(
             profiles=profiles,
             features=features,
@@ -236,8 +257,14 @@ def evaluate_metric(
 
     if operation == "mp_value":
         operation_kwargs["features"] = features
+        operation_kwargs["use_copairs"] = use_copairs
         operation_kwargs["replicate_groups"] = replicate_groups
 
+        if use_copairs and len(similarity_df) == 2:
+            operation_kwargs["control_pert_filter"] = similarity_df[1]
+            similarity_df = similarity_df[0]
+
+    print(f"\nCalculating metric: {operation}")
     metric_result = metric_fn(df=similarity_df, **operation_kwargs)
 
     if operation == "replicate_reproducibility" and not use_copairs:
@@ -255,6 +282,7 @@ def evaluate_metrics(
     use_copairs: bool = False,
     copairs_kwargs: Optional[dict] = None,
     similarity_df: Optional[pd.DataFrame] = None,
+    return_similarity_df: bool = False,
 ):
     r"""Evaluate profile quality and strength.
 
