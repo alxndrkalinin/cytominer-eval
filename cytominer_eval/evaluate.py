@@ -374,9 +374,8 @@ def evaluate_metrics(
     metrics_config = {k: metrics_config[k] for k in key_order if k in metrics_config}
 
     # similarity_df = None
-    metric_results = []
+    metric_results = {}
     for operation, operation_kwargs in metrics_config.items():
-        print(f"\nCalculating metric: {operation}")
         metric_result, similarity_df = evaluate_metric(
             profiles=profiles,
             features=features,
@@ -388,6 +387,6 @@ def evaluate_metrics(
             use_copairs=use_copairs,
             similarity_df=similarity_df,
         )
-        metric_results.append(metric_result)
+        metric_results["operation"] = metric_result
 
-    return metric_results
+    return (metric_result, similarity_df) if return_similarity_df else metric_results
