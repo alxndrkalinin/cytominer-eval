@@ -18,6 +18,7 @@ from cytominer_eval.operations import (
     mp_value,
     enrichment,
     hitk,
+    mean_ap,
 )
 
 from copairs.map import flatten_str_list, extract_filters
@@ -86,6 +87,7 @@ def get_operation_fn(operation_name):
         "mp_value": mp_value_copairs,
         "enrichment": enrichment,
         "hitk": hitk,
+        "mean_ap": mean_ap,
     }
 
     try:
@@ -182,6 +184,7 @@ def get_copairs_similarity_df(
         pos_to_neg_map = map_neg_pos_cliques(pos_cliques, neg_cliques)
 
         profiles["clique_id"] = pd.NA
+        # TODO: consider multithreading this
         for idx, clique in enumerate(pos_cliques):
             profiles.loc[clique, "clique_id"] = idx
             profiles.loc[pos_to_neg_map[idx], "clique_id"] = -1
