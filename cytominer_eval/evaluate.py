@@ -387,6 +387,6 @@ def evaluate_metrics(
             use_copairs=use_copairs,
             similarity_df=similarity_df,
         )
-        metric_results["operation"] = metric_result
+        metric_results[operation] = metric_result
 
     return (metric_result, similarity_df) if return_similarity_df else metric_results
