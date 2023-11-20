@@ -316,6 +316,7 @@ def get_copairs(
     else:
         matcher = create_matcher(meta, pos_sameby, pos_diffby, [], [], multilabel_col)
         pos_pairs = matcher.get_all_pairs(sameby=pos_sameby, diffby=pos_diffby)
+        _, pos_sameby = extract_filters(flatten_str_list(pos_sameby), meta.columns)
         pos_pairs = dict_to_dframe(pos_pairs, pos_sameby)
 
         matcher = create_matcher(meta, [], [], neg_sameby, neg_diffby, multilabel_col)
