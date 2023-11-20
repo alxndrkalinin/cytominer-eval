@@ -66,14 +66,11 @@ def mean_ap(
     pair_ids = set_pair_ids()
     pair_indices = [pair_ids[x]["index"] for x in pair_ids]
 
-    pos_idx = df[replicate_group_col] is True
-    neg_idx = df[replicate_group_col] is False
-
     rel_k_list, counts = build_rank_lists(
-        df.loc[pos_idx, pair_indices].values,
-        df.loc[neg_idx, pair_indices].values,
-        df.loc[pos_idx, "dist"].values,
-        df.loc[neg_idx, "dist"].values,
+        df.loc[df[replicate_group_col], pair_indices].values,
+        df.loc[~df[replicate_group_col], pair_indices].values,
+        df.loc[df[replicate_group_col], "dist"].values,
+        df.loc[~df[replicate_group_col], "dist"].values,
     )
 
     ap_scores, null_confs = compute.compute_ap_contiguous(rel_k_list, counts)
