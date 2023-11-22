@@ -24,6 +24,27 @@ from cytominer_eval.utils.mpvalue_utils import calculate_mp_value
 
 
 def process_group(group_data, control_df, features, control_pert_filter, **kwargs):
+    """Process a group of perturbations.
+
+    Parameters
+    ----------
+    group_data : tuple
+        Tuple with group_id and group_df.
+    control_df : pd.DataFrame
+        Dataframe with control profiles.
+    features : list
+        List of features to be used for the mp-value computation.
+    control_pert_filter : dict
+        Dictionary with control perturbations to be used for each group.
+    kwargs : dict
+        Optional parameters provided. See list of parameters in
+        :py:func:`cytominer_eval.operations.util.default_mp_value_parameters`
+
+        Returns
+        -------
+        tuple
+            Tuple with group_id and mp-value.
+    """
     group_id, group_df = group_data
     if control_pert_filter and group_id in control_pert_filter:
         group_control_df = control_df.loc[control_pert_filter[group_id], features]
@@ -32,68 +53,6 @@ def process_group(group_data, control_df, features, control_pert_filter, **kwarg
 
     mp_value = calculate_mp_value(group_df[features], group_control_df, **kwargs)
     return group_id, mp_value
-
-
-# def mp_value(
-#     df: pd.DataFrame,
-#     features: List[str],
-#     control_perts: List[str],
-#     replicate_id: str,
-#     control_pert_filter: dict = {},
-#     kwargs: dict = {},
-# ) -> pd.DataFrame:
-#     """Calculate multidimensional perturbation value (mp-value) [1].
-
-#     Parameters
-#     ----------
-#     df : pandas.DataFrame
-#         profiles with measurements per row and features or metadata per column.
-#     control_perts : list
-#         The control perturbations against which the distances will be computed.
-#     replicate_id : str
-#         The metadata identifier marking which column tracks control and replicate perts.
-#     features : list
-#         columns containing numerical features to be used for the mp-value computation
-#     params : dict, optional
-#         Optional parameters provided. See list of parameters in
-#         :py:func:`cytominer_eval.operations.util.default_mp_value_parameters`
-
-#     Returns
-#     -------
-#     pd.DataFrame
-#         mp-values per perturbation.
-#     """
-#     assert isinstance(
-#         replicate_id, str
-#     ), "replicate_id must be a string with column name"
-#     assert replicate_id in df.columns, "replicate_id not found in dataframe columns"
-
-#     # split control and replicate profiles
-#     control_df = df[df[replicate_id].isin(control_perts)]
-#     replicate_df = df[~df[replicate_id].isin(control_perts)]
-
-#     # calculate mp_value for each perturbation
-#     mp_value_dict = {}
-#     for group_id, group_df in tqdm(replicate_df.groupby(replicate_id)):
-
-#         if control_pert_filter:
-#             group_control_df = control_df.loc[control_pert_filter[group_id], features]
-#         else:
-#             group_control_df = control_df[features]
-
-#         mp_value = calculate_mp_value(
-#             group_df[features],
-#             group_control_df,
-#             **kwargs
-#         )
-#         mp_value_dict[group_id] = mp_value
-
-#     mp_value_df = pd.DataFrame(
-#         list(mp_value_dict.items()), columns=[replicate_id, "mp_value"]
-#     )
-#     mp_value_df.reset_index(inplace=True)
-
-#     return mp_value_df
 
 
 def mp_value(
@@ -144,6 +103,7 @@ def mp_value(
         **kwargs,
     )
 
+    # TODO: do not process groups multiple times
     with ThreadPoolExecutor() as executor:
         groups = list(
             tqdm(replicate_df.groupby(replicate_id), desc="Calculating mp-values")

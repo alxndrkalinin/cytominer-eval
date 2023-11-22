@@ -155,7 +155,6 @@ def get_copairs_similarity_df(
             {"ix1": "pair_a_index", "ix2": "pair_b_index"}, axis=1, inplace=True
         )
         similarity_df["similarity_metric"] = 1 - similarity_df["dist"]
-        print(similarity_df)
 
         metadata_ix1 = metadata.loc[similarity_df["pair_a_index"]].reset_index(
             drop=True
