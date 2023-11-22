@@ -151,4 +151,4 @@ def calculate_mp_value(
         control_perm = pca_array[np.logical_not(pert_mask_perm)]
         sim[i] = calculate_mahalanobis(pert_df=pert_perm, control_df=control_perm)
 
-    return np.mean(sim >= obs)
+    return (np.sum(sim >= obs) + 1) / (nb_permutations + 1)
