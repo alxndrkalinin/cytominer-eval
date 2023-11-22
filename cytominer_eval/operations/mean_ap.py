@@ -27,7 +27,7 @@ def rename_groupby_columns(ap_df, groupby_columns):
     if len(groupby_columns) > 1:
         rename_dict = {f"level_{i}": col for i, col in enumerate(groupby_columns)}
     else:
-        rename_dict = {"index": groupby_columns[0]}
+        rename_dict = {"index": groupby_columns[0], "level_0": groupby_columns[0]}
 
     return ap_df.rename(columns=rename_dict)
 
