@@ -32,6 +32,7 @@ def mp_value_copairs(
     replicate_groups=None,
     rescale_pca=True,
     nb_permutations=100,
+    random_seed=0,
     use_copairs=False,
     control_pert_filter=None,
 ):
@@ -45,7 +46,11 @@ def mp_value_copairs(
         replicate_id=replicate_id,
         features=features,
         control_pert_filter=control_pert_filter,
-        kwargs={"rescale_pca": rescale_pca, "nb_permutations": nb_permutations},
+        kwargs={
+            "rescale_pca": rescale_pca,
+            "nb_permutations": nb_permutations,
+            "random_seed": random_seed,
+        },
     )
 
     if use_copairs:
