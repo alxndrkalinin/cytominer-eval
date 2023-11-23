@@ -86,6 +86,7 @@ def calculate_mp_value(
     control_df: pd.DataFrame,
     rescale_pca: bool = True,
     nb_permutations: int = 100,
+    random_seed: int = 0,
 ) -> pd.Series:
     """Given perturbation and control dataframes, calculate mp-value per perturbation
 
@@ -115,7 +116,7 @@ def calculate_mp_value(
 
     # We reduce the dimensionality with PCA
     # so that 90% of the variance is conserved
-    pca = PCA(n_components=0.9, svd_solver="full")
+    pca = PCA(n_components=0.9, svd_solver="full", random_state=random_seed)
 
     try:
         pca_array = pca.fit_transform(merge_df)
@@ -145,8 +146,10 @@ def calculate_mp_value(
     sim = np.zeros(nb_permutations)
     pert_mask = np.zeros(pca_array.shape[0], dtype=bool)
     pert_mask[: pert_df.shape[0]] = 1
+
+    rng = np.random.default_rng(random_seed)
     for i in range(nb_permutations):
-        pert_mask_perm = np.random.permutation(pert_mask)
+        pert_mask_perm = rng.permutation(pert_mask)
         pert_perm = pca_array[pert_mask_perm]
         control_perm = pca_array[np.logical_not(pert_mask_perm)]
         sim[i] = calculate_mahalanobis(pert_df=pert_perm, control_df=control_perm)
