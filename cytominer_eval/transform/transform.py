@@ -307,7 +307,7 @@ def get_copairs(
         )
 
         pos_pairs = matcher.get_all_pairs(sameby=pos_sameby, diffby=pos_diffby)
-        pos_pairs = dict_to_dframe(pos_pairs, pos_sameby)
+        pos_pairs = dict_to_dframe(pos_pairs, flatten_str_list(pos_sameby))
 
         neg_pairs = matcher.get_all_pairs(sameby=neg_sameby, diffby=neg_diffby)
         neg_pairs = set(chain.from_iterable(neg_pairs.values()))
