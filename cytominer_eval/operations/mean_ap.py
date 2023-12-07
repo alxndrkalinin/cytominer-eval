@@ -1,7 +1,11 @@
 """Calculate mean average precision (mAP).
 """
-import pandas as pd
 from typing import List
+
+import numpy as np
+import pandas as pd
+from scipy.stats import combine_pvalues
+from statsmodels.stats.multitest import fdrcorrection
 
 from copairs import compute
 from copairs.map import build_rank_lists
@@ -86,12 +90,16 @@ def mean_ap(
     ap_dict = {}
     for group_name, group in grouped:
         node_indices = pd.unique(group[pair_indices].values.ravel())
+        # correct p-values for each AP node
+        _, corr_p_vals = fdrcorrection(p_values[node_indices], alpha=0.05)
         ap_dict[group_name] = {
             "mean_ap": ap_scores[node_indices].mean(),
-            "p_value": p_values[node_indices].mean(),
+            "p_value": combine_pvalues(corr_p_vals).pvalue,
             "n_pos_pairs": null_confs[node_indices, 0].mean(),
             "n_total_pairs": null_confs[node_indices, 1].mean(),
         }
 
     ap_df = pd.DataFrame.from_dict(ap_dict, orient="index").reset_index()
+    # correct aggregated p-values
+    ap_df["p_value"] = fdrcorrection(ap_df["p_value"], alpha=0.05)[1]
     return rename_groupby_columns(ap_df, groupby_columns)
