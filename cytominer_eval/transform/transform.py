@@ -11,7 +11,7 @@ from cytominer_eval.utils.transform_utils import (
 )
 
 from copairs.matching import dict_to_dframe
-from copairs.compute import pairwise_cosine
+from copairs.compute import pairwise_cosine, pairwise_euclidean, pairwise_corr
 from copairs.map import (
     create_matcher,
     flatten_str_list,
@@ -232,6 +232,7 @@ def copairs_similarity(
     neg_pairs: pd.DataFrame,
     feats: np.ndarray,
     batch_size: int = 20000,
+    distance_metric: str = "cosine",
 ):
     """Compute similarity for positive and negative pairs
 
@@ -251,10 +252,20 @@ def copairs_similarity(
     tuple(pandas.DataFrame, pandas.DataFrame)
         Positive and negative similarity
     """
-    pos_sim = pairwise_cosine(feats, pos_pairs[["ix1", "ix2"]].values, batch_size)
+    if distance_metric == "cosine":
+        pairwise_distance = pairwise_cosine
+    elif distance_metric == "euclidean":
+        pairwise_distance = pairwise_euclidean
+    elif distance_metric == "pearson":
+        pairwise_distance = pairwise_corr
+    else:
+        raise ValueError(f"Only 'cosine', 'euclidean' and 'pearson' distances are supported.")
+    
+    pos_sim = pairwise_distance(feats, pos_pairs[["ix1", "ix2"]].values, batch_size)
+    neg_sim = pairwise_distance(feats, neg_pairs[["ix1", "ix2"]].values, batch_size)
     pos_pairs["dist"] = pos_sim
-    neg_sim = pairwise_cosine(feats, neg_pairs[["ix1", "ix2"]].values, batch_size)
     neg_pairs["dist"] = neg_sim
+    
     return pos_pairs, neg_pairs
 
 

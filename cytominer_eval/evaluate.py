@@ -144,14 +144,14 @@ def map_neg_pos_cliques(pos_cliques, neg_cliques):
 
 
 def get_copairs_similarity_df(
-    profiles, features, meta_features, replicate_groups, operation
+    profiles, features, meta_features, replicate_groups, operation, distance_metric="cosine"
 ):
     metadata = profiles.loc[:, meta_features]
     feature_values = profiles.loc[:, features].values
     pos_pairs, neg_pairs = get_pos_neg_pairs(metadata, replicate_groups)
 
     if operation != "mp_value":
-        pos_pairs, neg_pairs = copairs_similarity(pos_pairs, neg_pairs, feature_values)
+        pos_pairs, neg_pairs = copairs_similarity(pos_pairs, neg_pairs, feature_values, distance_metric=distance_metric)
         pos_pairs["group_replicate"] = True
         neg_pairs["group_replicate"] = False
 
@@ -159,7 +159,7 @@ def get_copairs_similarity_df(
         similarity_df.rename(
             {"ix1": "pair_a_index", "ix2": "pair_b_index"}, axis=1, inplace=True
         )
-        similarity_df["similarity_metric"] = 1 - similarity_df["dist"]
+        similarity_df["similarity_metric"] = similarity_df["dist"]
 
         metadata_ix1 = metadata.loc[similarity_df["pair_a_index"]].reset_index(
             drop=True
@@ -206,6 +206,7 @@ def build_similarity_df(
     distance_metric,
     operation,
     use_copairs,
+    copairs_kwargs=None,
     upper_triagonal=False,
 ):
     if not use_copairs:
@@ -229,7 +230,7 @@ def build_similarity_df(
 
     elif use_copairs:
         similarity_df = get_copairs_similarity_df(
-            profiles, features, meta_features, replicate_groups, operation
+            profiles, features, meta_features, replicate_groups, operation, distance_metric=distance_metric
         )
 
     return similarity_df
@@ -287,7 +288,6 @@ def evaluate_metrics(
     metrics_config: dict,
     distance_metric: str = "pearson",
     use_copairs: bool = False,
-    copairs_kwargs: Optional[dict] = None,
     similarity_df: Optional[pd.DataFrame] = None,
     return_similarity_df: bool = False,
 ):
@@ -374,13 +374,12 @@ def evaluate_metrics(
         If percent_list == "all" a full dict with the length of classes will be created.
         Percentages are given as integers, ie 50 means 50 %.
     """
-    # make `replicate_reproducibility` first and `mp_value` last for easier reuse of similarity_df
+    # make `replicate_reproducibility` first and `mp_value` last for better reuse of similarity_df
     first_last_keys = ["replicate_reproducibility", "mp_value"]
     key_order = sorted(k for k in metrics_config if k not in first_last_keys)
     key_order = [first_last_keys[0], *key_order, first_last_keys[-1]]
     metrics_config = {k: metrics_config[k] for k in key_order if k in metrics_config}
 
-    # similarity_df = None
     metric_results = {}
     for operation, operation_kwargs in metrics_config.items():
         metric_result, similarity_df = evaluate_metric(
