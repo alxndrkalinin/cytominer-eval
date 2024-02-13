@@ -70,11 +70,12 @@ def mean_ap(
     pair_ids = set_pair_ids()
     pair_indices = [pair_ids[x]["index"] for x in pair_ids]
 
-    rel_k_list, counts = build_rank_lists(
+    rel_k_list, counts, unique_ids = build_rank_lists(
         df.loc[df[replicate_group_col], pair_indices].values,
         df.loc[~df[replicate_group_col], pair_indices].values,
         df.loc[df[replicate_group_col], "dist"].values,
         df.loc[~df[replicate_group_col], "dist"].values,
+        return_unique=True,
     )
 
     ap_scores, null_confs = compute.compute_ap_contiguous(rel_k_list, counts)
@@ -89,9 +90,12 @@ def mean_ap(
 
     ap_dict = {}
     for group_name, group in grouped:
-        node_indices = pd.unique(group[pair_indices].values.ravel())
+        # convert indices according to ap scores order
+        node_indices = np.searchsorted(unique_ids, pd.unique(group[pair_indices].values.ravel()))
+
         # correct p-values for each AP node
         _, corr_p_vals = fdrcorrection(p_values[node_indices], alpha=0.05)
+        # corr_p_vals = p_values[node_indices]
         ap_dict[group_name] = {
             "mean_ap": ap_scores[node_indices].mean(),
             "p_value": combine_pvalues(corr_p_vals).pvalue,

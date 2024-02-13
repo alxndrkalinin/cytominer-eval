@@ -106,6 +106,7 @@ def get_pos_neg_pairs(metadata, replicate_groups):
     pos_diffby = replicate_groups.get("pos_diffby", [])
     neg_sameby = replicate_groups.get("neg_sameby", [])
     neg_diffby = replicate_groups.get("neg_diffby", [])
+    multilabel_col = replicate_groups.get("multilabel_col", None)
 
     replicate_groups = flatten_str_list(pos_sameby, pos_diffby, neg_sameby, neg_diffby)
 
@@ -115,6 +116,7 @@ def get_pos_neg_pairs(metadata, replicate_groups):
         pos_diffby=pos_diffby,
         neg_sameby=neg_sameby,
         neg_diffby=neg_diffby,
+        multilabel_col=multilabel_col,
     )
 
     return pos_pairs, neg_pairs
