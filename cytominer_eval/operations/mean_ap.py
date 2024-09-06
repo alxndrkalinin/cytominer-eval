@@ -8,9 +8,16 @@ from scipy.stats import combine_pvalues
 from statsmodels.stats.multitest import fdrcorrection
 
 from copairs import compute
-from copairs.map import build_rank_lists
+from copairs.map.average_precision import build_rank_lists
 
 from cytominer_eval.utils.transform_utils import set_pair_ids
+
+
+def get_p_value(map_score, indices, null_dists, null_size, rev_ix):
+    null_dist = null_dists[rev_ix[indices]].mean(axis=0)
+    num = (null_dist > map_score).sum()
+    p_value = (num + 1) / (null_size + 1)
+    return p_value
 
 
 def rename_groupby_columns(ap_df, groupby_columns):
@@ -70,40 +77,35 @@ def mean_ap(
     pair_ids = set_pair_ids()
     pair_indices = [pair_ids[x]["index"] for x in pair_ids]
 
-    rel_k_list, counts, unique_ids = build_rank_lists(
+    unique_ids, rel_k_list, counts = build_rank_lists(
         df.loc[df[replicate_group_col], pair_indices].values,
         df.loc[~df[replicate_group_col], pair_indices].values,
         df.loc[df[replicate_group_col], "dist"].values,
         df.loc[~df[replicate_group_col], "dist"].values,
-        return_unique=True,
     )
 
-    ap_scores, null_confs = compute.compute_ap_contiguous(rel_k_list, counts)
-    p_values = compute.compute_p_values(
-        ap_scores, null_confs, null_size, seed=random_seed
-    )
+    ap_scores, null_confs = compute.ap_contiguous(rel_k_list, counts)
+    null_confs_unique, rev_ix = np.unique(null_confs, axis=0, return_inverse=True)
+    null_dists = compute.get_null_dists(null_confs_unique, null_size, seed=random_seed)
 
     suffix = pair_ids[list(pair_ids)[0]]["suffix"]
     groupby_cols_suffix = [f"{x}{suffix}" for x in groupby_columns]
-
     grouped = df.query(replicate_group_col).groupby(groupby_cols_suffix)
 
-    ap_dict = {}
+    map_dict = {}
     for group_name, group in grouped:
         # convert indices according to ap scores order
         node_indices = np.searchsorted(unique_ids, pd.unique(group[pair_indices].values.ravel()))
-
-        # correct p-values for each AP node
-        _, corr_p_vals = fdrcorrection(p_values[node_indices], alpha=0.05)
-        # corr_p_vals = p_values[node_indices]
-        ap_dict[group_name] = {
-            "mean_ap": ap_scores[node_indices].mean(),
-            "p_value": combine_pvalues(corr_p_vals).pvalue,
+        map_score = ap_scores[node_indices].mean()
+        p_value = get_p_value(map_score, node_indices, null_dists, null_size, rev_ix)
+        map_dict[group_name] = {
+            "mean_ap": map_score,
+            "p_value": p_value,
             "n_pos_pairs": null_confs[node_indices, 0].mean(),
             "n_total_pairs": null_confs[node_indices, 1].mean(),
         }
 
-    ap_df = pd.DataFrame.from_dict(ap_dict, orient="index").reset_index()
+    map_df = pd.DataFrame.from_dict(map_dict, orient="index").reset_index()
     # correct aggregated p-values
-    ap_df["p_value"] = fdrcorrection(ap_df["p_value"], alpha=0.05)[1]
-    return rename_groupby_columns(ap_df, groupby_columns)
+    map_df["p_value"] = fdrcorrection(map_df["p_value"], alpha=0.05)[1]
+    return rename_groupby_columns(map_df, groupby_columns)

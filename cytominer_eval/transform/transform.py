@@ -1,7 +1,8 @@
+from itertools import chain
+from typing import List, Tuple, Optional, Union
+
 import numpy as np
 import pandas as pd
-from typing import List, Tuple, Optional, Union
-from itertools import chain
 
 from cytominer_eval.utils.availability_utils import check_similarity_metric
 from cytominer_eval.utils.transform_utils import (
@@ -10,14 +11,9 @@ from cytominer_eval.utils.transform_utils import (
     set_pair_ids,
 )
 
-from copairs.matching import dict_to_dframe
+from copairs.matching import Matcher, MatcherMultilabel, dict_to_dframe
+from copairs.map.filter import flatten_str_list, extract_filters, evaluate_and_filter
 from copairs.compute import pairwise_cosine, pairwise_euclidean, pairwise_corr
-from copairs.map import (
-    create_matcher,
-    flatten_str_list,
-    extract_filters,
-    apply_filters,
-)
 
 
 def get_pairwise_metric(df: pd.DataFrame, similarity_metric: str) -> pd.DataFrame:
@@ -269,13 +265,45 @@ def copairs_similarity(
     return pos_pairs, neg_pairs
 
 
+def create_matcher(meta, columns, multilabel_col=None):
+    """Create a matcher object
+
+    Parameters
+    ----------
+    meta : pandas.DataFrame
+        Metadata dataframe
+    pos_sameby : list
+        List of columns that have to match to make a positive pair
+    pos_diffby : list
+        List of columns that have to differ to make a positive pair
+    neg_sameby : list
+        List of columns that have to match to make a negative pair
+    neg_diffby : list
+        List of columns that have to differ to make a negative pair
+    filters : list, optional
+        List of filters to apply to the metadata dataframe
+    multilabel_col : str, optional
+        Column to use for multilabel matching
+
+    Returns
+    -------
+    Matcher
+        Matcher object
+    """
+    meta, columns = evaluate_and_filter(meta, columns)
+    if multilabel_col is None:
+        return Matcher(meta, columns, seed=0)
+    else:
+        return MatcherMultilabel(meta, columns, multilabel_col, seed=0)
+
+
 def get_copairs(
     meta: pd.DataFrame,
     pos_sameby: List[str],
     pos_diffby: List[str],
     neg_sameby: List[str],
     neg_diffby: List[str],
-    filters: Optional[Union[List[str], str]] = None,
+    filters: Optional[List[str]] = None,
     multilabel_col: Optional[str] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Get positive and negative pairs
@@ -306,16 +334,11 @@ def get_copairs(
 
     # generic filters that do not affect matching
     if filters is not None:
-        query_list, _ = extract_filters(filters, meta.columns)
-        meta = apply_filters(meta, query_list)
+        meta, columns = evaluate_and_filter(meta, filters)
 
-    pos_columns = flatten_str_list(pos_sameby, pos_diffby)
-    neg_columns = flatten_str_list(neg_sameby, neg_diffby)
-
-    if all(c in meta.columns for c in pos_columns + neg_columns):
-        matcher = create_matcher(
-            meta, pos_sameby, pos_diffby, neg_sameby, neg_diffby, multilabel_col
-        )
+    columns = flatten_str_list(pos_sameby, pos_diffby, neg_sameby, neg_diffby)
+    if all(c in meta.columns for c in columns):
+        matcher = create_matcher(meta, columns, multilabel_col)
 
         pos_pairs = matcher.get_all_pairs(sameby=pos_sameby, diffby=pos_diffby)
         pos_pairs = dict_to_dframe(pos_pairs, flatten_str_list(pos_sameby))
@@ -325,12 +348,16 @@ def get_copairs(
         neg_pairs = pd.DataFrame(neg_pairs, columns=["ix1", "ix2"])
 
     else:
-        matcher = create_matcher(meta, pos_sameby, pos_diffby, [], [], multilabel_col)
+        # filtering the whole meta df may remove raws needed for negative pairs
+        #  so we get positive and negative pairs separately
+        pos_columns = flatten_str_list(pos_sameby, pos_diffby)
+        matcher = create_matcher(meta, pos_columns, multilabel_col)
         pos_pairs = matcher.get_all_pairs(sameby=pos_sameby, diffby=pos_diffby)
         _, pos_sameby = extract_filters(flatten_str_list(pos_sameby), meta.columns)
         pos_pairs = dict_to_dframe(pos_pairs, pos_sameby)
 
-        matcher = create_matcher(meta, [], [], neg_sameby, neg_diffby, multilabel_col)
+        neg_columns = flatten_str_list(neg_sameby, neg_diffby)
+        matcher = create_matcher(meta, neg_columns, multilabel_col)
         neg_pairs = matcher.get_all_pairs(sameby=neg_sameby, diffby=neg_diffby)
         neg_pairs = set(chain.from_iterable(neg_pairs.values()))
         neg_pairs = pd.DataFrame(neg_pairs, columns=["ix1", "ix2"])

@@ -21,7 +21,7 @@ from cytominer_eval.operations import (
     mean_ap,
 )
 
-from copairs.map import flatten_str_list, extract_filters
+from copairs.map.filter import flatten_str_list, extract_filters
 
 
 def mp_value_copairs(
