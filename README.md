@@ -1,3 +1,5 @@
+This package is deprecated and will no longer be supported. Please use at your own risk!
+
 # Cytominer-eval: Evaluating quality of perturbation profiles
 
 [![Actions Status](https://github.com/cytomining/cytominer-eval/workflows/Python%20build/badge.svg)](https://github.com/cytomining/cytominer-eval/actions)
